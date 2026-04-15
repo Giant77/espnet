@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
-set -e
-set -u
+# set -e
+# set -u
 set -o pipefail
 
-lang=all # all, en_us, af_za, fr_fr ... see https://huggingface.co/datasets/google/fleurs#dataset-structure for list of all langs
+lang=en_us # all, en_us, af_za, fr_fr ... see https://huggingface.co/datasets/google/fleurs#dataset-structure for list of all langs
 
 train_set=train_"$(echo "${lang}" | tr - _)"
 train_dev=dev_"$(echo "${lang}" | tr - _)"
