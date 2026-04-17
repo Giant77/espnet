@@ -1,0 +1,6 @@
+beam_size: 10          # NEW: 10 for speed/accuracy tradeoff on single GPU
+ctc_weight: 0.3
+lm_weight: 0.0         # set to 0.3 for Experiment 2 (shallow fusion)
+penalty: 0.0
+maxlenratio: 0.0
+minlenratio: 0.0

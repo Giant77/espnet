@@ -1,0 +1,62 @@
+# Reference: ESPnet2 conformer recipe; reduced adim and layers
+encoder: conformer
+encoder_conf:
+    output_size: 256        # NEW: 256 (vs 512 in full) for VRAM constraint
+    attention_heads: 4
+    linear_units: 2048
+    num_blocks: 12
+    dropout_rate: 0.1
+    positional_dropout_rate: 0.1
+    attention_dropout_rate: 0.1
+    input_layer: conv2d
+    normalize_before: true
+    selfattn_layer_type: rel_selfattn
+    # NEW: rel_selfattn required for multilingual positional encoding stability
+
+decoder: transformer
+decoder_conf:
+    attention_heads: 4
+    linear_units: 2048
+    num_blocks: 6
+    dropout_rate: 0.1
+    positional_dropout_rate: 0.1
+    self_attention_dropout_rate: 0.1
+    src_attention_dropout_rate: 0.1
+
+model:
+    ctc_weight: 0.3    # per bab3.tex eq:persamaan-ctc α = 0.3
+
+optim: adam
+optim_conf:
+    lr: 0.001
+scheduler: warmuplr
+scheduler_conf:
+    warmup_steps: 25000
+
+specaug: specaug
+specaug_conf:
+    apply_time_warp: true
+    time_warp_window: 5
+    apply_time_mask: true
+    time_mask_width_ratio_range: [0., 0.05]
+    num_time_mask: 2
+    apply_freq_mask: true
+    freq_mask_width_range: [0, 27]
+    num_freq_mask: 2
+    # NEW: SpecAugment per bab3.tex §Pelatihan Model ASR
+
+max_epoch: 50
+# NEW: 50 epochs max for undergraduate timeline; stop early if plateau > 5 epochs
+patience: 5
+val_scheduler_criterion:
+    - valid
+    - acc
+best_model_criterion:
+    - - valid
+      - acc
+      - max
+
+batch_type: numel
+batch_bins: 4000000   # NEW: reduced from default 12M for 6GB VRAM
+
+num_workers: 2
