@@ -10,8 +10,13 @@ encoder_conf:
     attention_dropout_rate: 0.1
     input_layer: conv2d
     normalize_before: true
-    selfattn_layer_type: rel_selfattn
-    # NEW: rel_selfattn required for multilingual positional encoding stability
+    macaron_style: true
+    rel_pos_type: latest
+    pos_enc_layer_type: rel_pos
+    selfattention_layer_type: rel_selfattn
+    activation_type: swish
+    use_cnn_module: true
+    cnn_module_kernel: 31
 
 decoder: transformer
 decoder_conf:
@@ -22,32 +27,40 @@ decoder_conf:
     positional_dropout_rate: 0.1
     self_attention_dropout_rate: 0.1
     src_attention_dropout_rate: 0.1
+    layer_drop_rate: 0.0 # librispeech 100
 
 model:
-    ctc_weight: 0.3    # per bab3.tex eq:persamaan-ctc α = 0.3
+    ctc_weight: 0.3 # per bab3.tex eq:persamaan-ctc α = 0.3
+    lsm_weight: 0.1 # librispeech 100
+    length_normalized_loss: false   # librispeech 100
 
 optim: adam
 optim_conf:
-    lr: 0.001
+    lr: 0.002 # librispeech 100; pref: 0.001
 scheduler: warmuplr
 scheduler_conf:
-    warmup_steps: 25000
+    warmup_steps: 15000 # librispeech 100; pref: 25000
 
 specaug: specaug
 specaug_conf:
     apply_time_warp: true
     time_warp_window: 5
-    apply_time_mask: true
-    time_mask_width_ratio_range: [0., 0.05]
-    num_time_mask: 2
+    time_warp_mode: bicubic # librispeech 100; pref: none
     apply_freq_mask: true
-    freq_mask_width_range: [0, 27]
+    freq_mask_width_range:
+    - 0
+    - 27
     num_freq_mask: 2
+    apply_time_mask: true
+    time_mask_width_ratio_range:
+    - 0.
+    - 0.05
+    num_time_mask: 5 # librispeech 100; pref: 2
     # NEW: SpecAugment per bab3.tex §Pelatihan Model ASR
 
-max_epoch: 50
+max_epoch: 50 # 50 or more - Pak Husaini
 # NEW: 50 epochs max for undergraduate timeline; stop early if plateau > 5 epochs
-patience: 5
+patience: 10
 val_scheduler_criterion:
     - valid
     - acc
@@ -57,6 +70,6 @@ best_model_criterion:
       - max
 
 batch_type: numel
-batch_bins: 4000000   # NEW: reduced from default 12M for 6GB VRAM
+batch_bins: 4000000   # NEW: reduced from default 12M for 6GB VRAM; librispeech100: 16000000
 
 num_workers: 2

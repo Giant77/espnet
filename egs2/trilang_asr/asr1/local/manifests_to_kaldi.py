@@ -74,11 +74,11 @@ def write_kaldi_dir(records: list, output_dir: str,
 
 
 def split_records(records: list,
-                   train_ratio: float = 0.7,
-                   dev_ratio: float   = 0.2,
+                   train_ratio: float = 0.8,
+                   dev_ratio: float   = 0.1,
                    seed: int          = 42) -> tuple:
     """
-    Speaker-independent 7:2:1 split.
+    Speaker-independent 8:1:1 split.
     NEW: Fixed seed for reproducibility — mandatory for TA submission
     """
     import random

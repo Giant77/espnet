@@ -16,7 +16,7 @@
 # set -o pipefail
 
 lang=id       # id | ar | en
-stage=1
+stage=2
 stop_stage=13
 ngpu=1
 nj=4
@@ -42,7 +42,6 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --ngpu ${ngpu} \
     --nj ${nj} \
     --lang ${lang} \
-    --feats_type fbank \
     --audio_format wav \
     --token_type bpe \
     --nbpe ${nbpe} \

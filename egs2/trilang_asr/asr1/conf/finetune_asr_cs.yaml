@@ -1,8 +1,7 @@
 # Per global resolution: CS fine-tuning ONLY, never mixed with initial train
-
 encoder: conformer
 encoder_conf:
-    output_size: 256
+    output_size: 256        # NEW: 256 (vs 512 in full) for VRAM constraint
     attention_heads: 4
     linear_units: 2048
     num_blocks: 12
@@ -11,7 +10,13 @@ encoder_conf:
     attention_dropout_rate: 0.1
     input_layer: conv2d
     normalize_before: true
-    selfattn_layer_type: rel_selfattn
+    macaron_style: true
+    rel_pos_type: latest
+    pos_enc_layer_type: rel_pos
+    selfattention_layer_type: rel_selfattn
+    activation_type: swish
+    use_cnn_module: true
+    cnn_module_kernel: 31    
 
 decoder: transformer
 decoder_conf:
@@ -28,7 +33,7 @@ model:
 
 optim: adam
 optim_conf:
-    lr: 0.0001          # NEW: 10x lower than initial training for fine-tuning stability
+    lr: 0.0002          # NEW: 10x lower than initial training for fine-tuning stability
 scheduler: warmuplr
 scheduler_conf:
     warmup_steps: 5000  # NEW: shorter warmup for fine-tuning
