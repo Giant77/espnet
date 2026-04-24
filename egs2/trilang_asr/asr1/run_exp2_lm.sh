@@ -35,7 +35,6 @@ echo "=== Experiment 2: Shallow Fusion (XGLM-564M, lm_weight=${lm_weight}) ==="
     --ngpu ${ngpu} \
     --nj ${nj} \
     --lang "trilingual" \
-    --feats_type fbank \
     --audio_format wav \
     --token_type bpe \
     --nbpe 5000 \
@@ -50,4 +49,5 @@ echo "=== Experiment 2: Shallow Fusion (XGLM-564M, lm_weight=${lm_weight}) ==="
     --gpu_inference true \
     --inference_args "--lm_weight ${lm_weight}" \
     --asr_model_file "${tri_model}" \
+    --download_model XGLM-564M \
     "$@"

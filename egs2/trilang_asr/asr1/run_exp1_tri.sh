@@ -34,7 +34,6 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --ngpu ${ngpu} \
     --nj ${nj} \
     --lang "trilingual" \
-    --feats_type fbank \
     --audio_format wav \
     --token_type bpe \
     --nbpe ${nbpe} \

@@ -60,7 +60,6 @@ fi
     --ngpu ${ngpu} \
     --nj ${nj} \
     --lang "trilingual_cs" \
-    --feats_type fbank \
     --audio_format wav \
     --token_type bpe \
     --nbpe ${nbpe} \

@@ -1,52 +1,107 @@
 """
 manifests_to_kaldi.py
-Converts JSON manifests (from Windows preprocessing) to Kaldi-style files:
-  wav.scp, text, utt2spk, spk2utt
-NEW: Using absolute WSL paths; supports multi-dataset merge per language
+...
+UPDATED:
+- Dry-run mode (--dry-run): no files written; prints summaries only
 """
+
 import json
 import os
-import sys
+import argparse
 from pathlib import Path
 from collections import defaultdict
 
 
-def load_manifest(path: str) -> list:
+# ─────────────────────────────────────────────────────────────────────────────
+# Manifest Loading
+# ─────────────────────────────────────────────────────────────────────────────
+
+def load_manifest(path: str) -> dict:
     with open(path, encoding='utf-8') as f:
         return json.load(f)
 
 
-def write_kaldi_dir(records: list, output_dir: str,
-                     remap_audio_root: str = None) -> None:
-    """
-    Write Kaldi data directory files.
-    remap_audio_root: if set, replaces Windows-style paths with WSL path
-    """
+def extract_records(manifest: dict) -> dict:
+    if isinstance(manifest, list):
+        return {"all": manifest}
+
+    splits = {}
+    for split in ["train", "dev", "test"]:
+        if split in manifest:
+            splits[split] = manifest[split]
+
+    if not splits:
+        return {"all": manifest.get("records", [])}
+
+    return splits
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Path Normalization
+# ─────────────────────────────────────────────────────────────────────────────
+
+def to_wsl_path(path: str) -> str:
+    if not path:
+        return path
+
+    path = path.replace('\\', '/')
+
+    if len(path) > 2 and path[1] == ':':
+        drive = path[0].lower()
+        return f"/mnt/{drive}{path[2:]}"
+    
+    return path
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dry-run Summary
+# ─────────────────────────────────────────────────────────────────────────────
+
+def summarize_records(records: list, name: str):
+    n = len(records)
+    speakers = set()
+    total_dur = 0.0
+
+    for r in records:
+        speakers.add(r.get("speaker", "spk_unknown"))
+        total_dur += float(r.get("duration", 0.0))
+
+    print(f"[DRY-RUN] {name}")
+    print(f"  utterances : {n}")
+    print(f"  speakers   : {len(speakers)}")
+    print(f"  hours      : {total_dur / 3600:.2f}")
+
+    if n > 0:
+        sample = records[0]
+        print(f"  sample utt : {sample.get('utt_id')}")
+        print(f"  sample wav : {to_wsl_path(sample.get('wav_path',''))}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Kaldi Writer
+# ─────────────────────────────────────────────────────────────────────────────
+
+def write_kaldi_dir(records: list, output_dir: str, dry_run: bool = False) -> None:
+    if dry_run:
+        summarize_records(records, output_dir)
+        return
+
     os.makedirs(output_dir, exist_ok=True)
 
-    wav_scp   = {}
-    text_map  = {}
-    utt2spk   = {}
+    wav_scp = {}
+    text_map = {}
+    utt2spk = {}
 
     for rec in records:
-        utt_id   = rec['utt_id']
-        wav_path = rec['wav_path']
-        text     = rec['text']
-        speaker  = rec.get('speaker', f"spk_{utt_id[:8]}")
+        utt_id = rec['utt_id']
+        wav_path = to_wsl_path(rec['wav_path'])
+        text = rec['text']
+        speaker = rec.get('speaker', f"spk_{utt_id[:8]}")
 
-        if remap_audio_root:
-            # Convert Windows path to WSL path
-            wav_path = wav_path.replace('\\', '/')
-            drive = wav_path[:2]
-            if ':' in drive:
-                drive_letter = drive[0].lower()
-                wav_path = f"/mnt/{drive_letter}" + wav_path[2:]
-
-        wav_scp[utt_id]  = wav_path
+        wav_scp[utt_id] = wav_path
         text_map[utt_id] = text
-        utt2spk[utt_id]  = speaker
+        utt2spk[utt_id] = speaker
 
-    # Sort all by utterance ID (Kaldi requirement)
     sorted_utts = sorted(wav_scp.keys())
 
     with open(os.path.join(output_dir, 'wav.scp'), 'w', encoding='utf-8') as f:
@@ -61,7 +116,6 @@ def write_kaldi_dir(records: list, output_dir: str,
         for u in sorted_utts:
             f.write(f"{u} {utt2spk[u]}\n")
 
-    # Generate spk2utt from utt2spk
     spk2utt = defaultdict(list)
     for u, s in utt2spk.items():
         spk2utt[s].append(u)
@@ -70,21 +124,17 @@ def write_kaldi_dir(records: list, output_dir: str,
         for s in sorted(spk2utt.keys()):
             f.write(f"{s} {' '.join(sorted(spk2utt[s]))}\n")
 
-    print(f"Written {len(sorted_utts)} utterances to {output_dir}")
+    print(f"Written {len(sorted_utts)} utterances → {output_dir}")
 
 
-def split_records(records: list,
-                   train_ratio: float = 0.8,
-                   dev_ratio: float   = 0.1,
-                   seed: int          = 42) -> tuple:
-    """
-    Speaker-independent 8:1:1 split.
-    NEW: Fixed seed for reproducibility — mandatory for TA submission
-    """
+# ─────────────────────────────────────────────────────────────────────────────
+# Split
+# ─────────────────────────────────────────────────────────────────────────────
+
+def split_records(records: list, train_ratio=0.8, dev_ratio=0.1, seed=42):
     import random
     random.seed(seed)
 
-    # Group by speaker
     spk_to_utts = defaultdict(list)
     for rec in records:
         spk_to_utts[rec.get('speaker', 'spk_unknown')].append(rec)
@@ -94,68 +144,80 @@ def split_records(records: list,
 
     n = len(speakers)
     n_train = int(n * train_ratio)
-    n_dev   = int(n * dev_ratio)
+    n_dev = int(n * dev_ratio)
 
     train_spks = set(speakers[:n_train])
-    dev_spks   = set(speakers[n_train:n_train + n_dev])
-    test_spks  = set(speakers[n_train + n_dev:])
+    dev_spks = set(speakers[n_train:n_train + n_dev])
+    test_spks = set(speakers[n_train + n_dev:])
 
     train = [r for r in records if r.get('speaker') in train_spks]
-    dev   = [r for r in records if r.get('speaker') in dev_spks]
-    test  = [r for r in records if r.get('speaker') in test_spks]
+    dev = [r for r in records if r.get('speaker') in dev_spks]
+    test = [r for r in records if r.get('speaker') in test_spks]
 
     return train, dev, test
 
 
-if __name__ == '__main__':
-    manifest_dir = "downloads/processed/manifests"
-    data_dir     = "data"
-    wsl_proc_root = "downloads/processed"
+# ─────────────────────────────────────────────────────────────────────────────
+# Main
+# ─────────────────────────────────────────────────────────────────────────────
 
-    # ─── Language groups ─────────────────────────────────────────────────────
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--dry-run", action='store_true')
+    args = parser.parse_args()
+
+    manifest_dir = "downloads/processed/manifests_v1"
+    data_dir = "data"
+
     lang_groups = {
-        "id":  ["id_cv", "id_fleurs", "id_librivox", "id_titml",
-                 "id_indocsc", "id_sindodsc"],
-        "ar":  ["ar_cv", "ar_fleurs", "ar_clartts"],
-        "en":  ["en_librispeech", "en_fleurs", "en_cv_spon"],
-        "cs":  ["cs_escwa", "cs_hari", "cs_homostoria"],
+        "id": ["id_cv", "id_fleurs", "id_librivox", "id_titml",
+               "id_indocsc", "id_sindodsc"],
+        "ar": ["ar_cv", "ar_fleurs", "ar_clartts"],
+        "en": ["en_librispeech", "en_fleurs", "en_cv_spon"],
+        "cs": ["cs_escwa", "cs_hari", "cs_homostoria"],
     }
 
-    all_lang_records = {}
+    all_lang_splits = {}
 
     for lang, keys in lang_groups.items():
-        combined = []
+        lang_splits = {"train": [], "dev": [], "test": [], "all": []}
+
         for key in keys:
             mf = os.path.join(manifest_dir, f"{key}_manifest.json")
-            if os.path.exists(mf):
-                recs = load_manifest(mf)
-                combined.extend(recs)
-                print(f"  Loaded {key}: {len(recs)} records")
+
+            if not os.path.exists(mf):
+                print(f"WARN: Missing {mf}")
+                continue
+
+            manifest = load_manifest(mf)
+            splits = extract_records(manifest)
+
+            if "train" in splits:
+                for s in ["train", "dev", "test"]:
+                    lang_splits[s].extend(splits.get(s, []))
             else:
-                print(f"  WARN: Missing manifest {mf}")
-        all_lang_records[lang] = combined
-        print(f"  {lang.upper()} total: {len(combined)} records")
+                lang_splits["all"].extend(splits["all"])
 
-    # ─── Per-language splits and Kaldi dirs ──────────────────────────────────
-    for lang, records in all_lang_records.items():
-        if lang == "cs":
-            # CS: split independently with same 7:2:1 ratio
-            train, dev, test = split_records(records)
-        else:
-            train, dev, test = split_records(records)
+        if lang_splits["all"] and not lang_splits["train"]:
+            tr, dv, te = split_records(lang_splits["all"])
+            lang_splits["train"] = tr
+            lang_splits["dev"] = dv
+            lang_splits["test"] = te
 
-        for split, recs in [('train', train), ('dev', dev), ('test', test)]:
+        all_lang_splits[lang] = lang_splits
+
+    # Write per-language
+    for lang, splits in all_lang_splits.items():
+        for split in ["train", "dev", "test"]:
             out_dir = os.path.join(data_dir, lang, split)
-            write_kaldi_dir(recs, out_dir)
+            write_kaldi_dir(splits[split], out_dir, dry_run=args.dry_run)
 
-    # ─── Trilingual combined (tri = id + ar + en, no cs) ─────────────────────
-    tri_records = (all_lang_records['id'] +
-                   all_lang_records['ar'] +
-                   all_lang_records['en'])
-    print(f"\nTrilingual total: {len(tri_records)} records")
-    train_tri, dev_tri, test_tri = split_records(tri_records)
-    for split, recs in [('train', train_tri), ('dev', dev_tri), ('test', test_tri)]:
+    # Trilingual
+    tri = {"train": [], "dev": [], "test": []}
+    for lang in ["id", "ar", "en"]:
+        for split in ["train", "dev", "test"]:
+            tri[split].extend(all_lang_splits[lang][split])
+
+    for split in ["train", "dev", "test"]:
         out_dir = os.path.join(data_dir, "tri", split)
-        write_kaldi_dir(recs, out_dir)
-
-    print("\nKaldi directories written. Run utils/fix_data_dir.sh next.")
+        write_kaldi_dir(tri[split], out_dir, dry_run=args.dry_run)
