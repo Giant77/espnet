@@ -8,7 +8,6 @@ UPDATED:
 import json
 import os
 import argparse
-from pathlib import Path
 from collections import defaultdict
 
 
@@ -45,6 +44,10 @@ def to_wsl_path(path: str) -> str:
         return path
 
     path = path.replace('\\', '/')
+
+    if "Dataset/processed/" in path:
+        suffix = path.split("Dataset/processed/", 1)[1]
+        path = f"downloads/processed/{suffix}"
 
     if len(path) > 2 and path[1] == ':':
         drive = path[0].lower()
@@ -166,12 +169,13 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--dry-run", action='store_true')
     args = parser.parse_args()
 
-    manifest_dir = "downloads/processed/manifests_v1"
+    manifest_dir = "downloads/processed/manifests/balanced"
     data_dir = "data"
 
     lang_groups = {
-        "id": ["id_cv", "id_fleurs", "id_librivox", "id_titml",
-               "id_indocsc", "id_sindodsc"],
+        "id": ["id_cv", "id_fleurs", 
+            #    "id_librivox",
+                 "id_titml", "id_indocsc", "id_sindodsc"],
         "ar": ["ar_cv", "ar_fleurs", "ar_clartts"],
         "en": ["en_librispeech", "en_fleurs", "en_cv_spon"],
         "cs": ["cs_escwa", "cs_hari", "cs_homostoria"],
