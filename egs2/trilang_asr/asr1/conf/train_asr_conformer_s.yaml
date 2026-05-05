@@ -34,9 +34,11 @@ model_conf:
   lsm_weight: 0.1 # librispeech 100
   length_normalized_loss: false # librispeech 100
 
+seed: 777
+
 optim: adam
 optim_conf:
-lr: 0.002 # librispeech 100; pref: 0.001
+  lr: 0.002 # librispeech 100; pref: 0.001
 scheduler: warmuplr
 scheduler_conf:
   warmup_steps: 15000 # librispeech 100; pref: 25000
