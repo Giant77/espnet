@@ -45,8 +45,8 @@ def to_wsl_path(path: str) -> str:
 
     path = path.replace('\\', '/')
 
-    if "Dataset/processed/" in path:
-        suffix = path.split("Dataset/processed/", 1)[1]
+    if "dataset/processed/" in path:
+        suffix = path.split("dataset/processed/", 1)[1]
         path = f"downloads/processed/{suffix}"
 
     if len(path) > 2 and path[1] == ':':
