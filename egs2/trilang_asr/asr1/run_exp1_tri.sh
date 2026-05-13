@@ -38,6 +38,7 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --token_type bpe \
     --nbpe ${nbpe} \
     --bpe_train_text "data/tri/train/text" \
+    --nlsyms_txt "local/nlsyms.txt" \
     --asr_config "conf/train_asr_conformer_s.yaml" \
     --inference_config "conf/decode_asr.yaml" \
     --use_lm false \

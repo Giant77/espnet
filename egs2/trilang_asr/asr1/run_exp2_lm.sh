@@ -38,6 +38,7 @@ echo "=== Experiment 2: Shallow Fusion (XGLM-564M, lm_weight=${lm_weight}) ==="
     --audio_format wav \
     --token_type bpe \
     --nbpe 5000 \
+    --nlsyms_txt "local/nlsyms.txt" \
     --asr_config "conf/train_asr_conformer_s.yaml" \
     --inference_config "conf/decode_asr_lm.yaml" \
     --use_lm true \

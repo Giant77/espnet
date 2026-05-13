@@ -134,7 +134,7 @@ def write_kaldi_dir(records: list, output_dir: str, dry_run: bool = False) -> No
 # Split
 # ─────────────────────────────────────────────────────────────────────────────
 
-def split_records(records: list, train_ratio=0.8, dev_ratio=0.1, seed=42):
+def split_records(records: list, train_ratio=0.8, dev_ratio=0.1, seed=777):
     import random
     random.seed(seed)
 

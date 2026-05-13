@@ -64,6 +64,7 @@ fi
     --token_type bpe \
     --nbpe ${nbpe} \
     --bpe_train_text "data/tri/train/text" \
+    --nlsyms_txt "local/nlsyms.txt" \
     --asr_config "conf/finetune_asr_cs.yaml" \
     --inference_config "conf/decode_asr.yaml" \
     --use_lm false \
