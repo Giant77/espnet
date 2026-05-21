@@ -9,7 +9,18 @@ import json
 import os
 import argparse
 from collections import defaultdict
+import subprocess
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper functions
+# ─────────────────────────────────────────────────────────────────────────────
+def run_cmd(cmd):
+    print("──"*25)
+
+    print("Running:", " ".join(cmd))
+    subprocess.run(cmd)
+
+    print()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Manifest Loading
@@ -181,6 +192,7 @@ if __name__ == '__main__':
         "cs": ["cs_escwa", "cs_hari", "cs_homostoria"],
     }
 
+    output_dirs = []
     all_lang_splits = {}
 
     for lang, keys in lang_groups.items():
@@ -210,11 +222,13 @@ if __name__ == '__main__':
 
         all_lang_splits[lang] = lang_splits
 
+
     # Write per-language
     for lang, splits in all_lang_splits.items():
         for split in ["train", "dev", "test"]:
             out_dir = os.path.join(data_dir, lang, split)
             write_kaldi_dir(splits[split], out_dir, dry_run=args.dry_run)
+            output_dirs.append(out_dir)
 
     # Trilingual
     tri = {"train": [], "dev": [], "test": []}
@@ -225,3 +239,10 @@ if __name__ == '__main__':
     for split in ["train", "dev", "test"]:
         out_dir = os.path.join(data_dir, "tri", split)
         write_kaldi_dir(tri[split], out_dir, dry_run=args.dry_run)
+        output_dirs.append(out_dir)
+
+# fix + validate
+if not args.dry_run:
+    for d in output_dirs:
+        run_cmd(["./utils/fix_data_dir.sh", d])
+        run_cmd(["./utils/validate_data_dir.sh", d, "--no-feats"])
