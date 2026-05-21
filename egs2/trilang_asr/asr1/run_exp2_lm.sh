@@ -17,6 +17,7 @@ stop_stage=13
 ngpu=1
 nj=4
 lm_weight=0.3  # tuned on dev; override with --lm_weight X
+nbpe=10000
 
 . utils/parse_options.sh || true
 
@@ -37,7 +38,7 @@ echo "=== Experiment 2: Shallow Fusion (XGLM-564M, lm_weight=${lm_weight}) ==="
     --lang "trilingual" \
     --audio_format wav \
     --token_type bpe \
-    --nbpe 5000 \
+    --nbpe ${nbpe} \
     --nlsyms_txt "local/nlsyms.txt" \
     --asr_config "conf/train_asr_conformer_s.yaml" \
     --inference_config "conf/decode_asr_lm.yaml" \

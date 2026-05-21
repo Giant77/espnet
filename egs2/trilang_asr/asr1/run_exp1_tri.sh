@@ -21,7 +21,7 @@ stop_stage=13
 ngpu=1         # SERVER NOTE: set to 2 for DDP if running alone on server
                #   --ngpu 2 uses DDP; faster by ~1.7× but blocks 2 GPUs
 nj=4
-nbpe=5000
+nbpe=10000
 
 . utils/parse_options.sh || true
 
