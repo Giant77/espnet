@@ -18,7 +18,7 @@ def run_cmd(cmd):
     print("──"*25)
 
     print("Running:", " ".join(cmd))
-    subprocess.run(cmd)
+    subprocess.run(cmd, check=True)
 
     print()
 
