@@ -20,7 +20,7 @@ stage=1
 stop_stage=13
 ngpu=1
 nj=4
-nbpe=10000
+nbpe=2000
 
 . utils/parse_options.sh || true
 

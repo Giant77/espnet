@@ -61,7 +61,7 @@ specaug_conf:
   # NEW: SpecAugment per bab3.tex §Pelatihan Model ASR
 
 max_epoch: 50 # 50 or more - Pak Husaini
-# NEW: 50 epochs max for undergraduate timeline; stop early if plateau > 5 epochs
+
 patience: 10
 val_scheduler_criterion:
   - valid
@@ -72,6 +72,8 @@ best_model_criterion:
     - max
 
 batch_type: numel
-batch_bins: 200000 # reduced for ~7 GB VRAM
+batch_bins: 350000 # 11 GB fallback 1: 300000; 2: 250000; 6 GB: 200000
+
+grad_clip: 5
 
 num_workers: 2

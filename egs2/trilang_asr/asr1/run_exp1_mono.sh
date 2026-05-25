@@ -29,9 +29,7 @@ case "$lang" in
   *) echo "ERROR: --lang must be id, ar, or en"; exit 1 ;;
 esac
 
-# Shared BPE model trained on trilingual text (Stage 7 prerequisite)
-bpe_model="data/bpe_trilingual.model"
-nbpe=5000
+nbpe=1000
 
 echo "=== Experiment 1: Monolingual ASR — ${lang^^} ==="
 echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"

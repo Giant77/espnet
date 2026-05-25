@@ -17,7 +17,7 @@ stop_stage=13
 ngpu=1
 nj=4
 lm_weight=0.3  # tuned on dev; override with --lm_weight X
-nbpe=10000
+nbpe=2000
 
 . utils/parse_options.sh || true
 
