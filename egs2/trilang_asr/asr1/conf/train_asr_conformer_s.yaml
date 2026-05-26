@@ -58,9 +58,8 @@ specaug_conf:
     - 0.
     - 0.05
   num_time_mask: 5 # librispeech 100; pref: 2
-  # NEW: SpecAugment per bab3.tex §Pelatihan Model ASR
 
-max_epoch: 50 # 50 or more - Pak Husaini
+max_epoch: 5
 
 patience: 10
 val_scheduler_criterion:
@@ -72,7 +71,9 @@ best_model_criterion:
     - max
 
 batch_type: numel
-batch_bins: 350000 # 11 GB fallback 1: 300000; 2: 250000; 6 GB: 200000
+batch_bins: 300000 # 11 GB def: 350000 fallback 1: 300000; 2: 250000; 6 GB: 200000
+# batch_bins: 350000 # 11 GB fallback 1: 300000; 2: 250000; 6 GB: 200000
+accum_grad: 2
 
 grad_clip: 5
 
