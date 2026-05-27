@@ -19,7 +19,17 @@ nj=4
 lm_weight=0.3  # tuned on dev; override with --lm_weight X
 nbpe=2000
 
-. utils/parse_options.sh || true
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --lang)
+            lang="$2"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 tri_model="exp/asr_tri_base/valid.acc.best.pth"
 if [ ! -f "${tri_model}" ]; then

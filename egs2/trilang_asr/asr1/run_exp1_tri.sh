@@ -23,7 +23,17 @@ ngpu=1         # SERVER NOTE: set to 2 for DDP if running alone on server
 nj=4
 nbpe=2000
 
-. utils/parse_options.sh || true
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --lang)
+            lang="$2"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 echo "=== Experiment 1: Trilingual Base Model (NO CS) ==="
 echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"

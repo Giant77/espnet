@@ -21,7 +21,17 @@ stop_stage=13
 ngpu=1
 nj=4
 
-. utils/parse_options.sh || true
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --lang)
+            lang="$2"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 # NEW: Validate lang argument
 case "$lang" in

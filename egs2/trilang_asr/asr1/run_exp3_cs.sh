@@ -22,7 +22,17 @@ ngpu=1
 nj=4
 nbpe=2000
 
-. utils/parse_options.sh || true
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --lang)
+            lang="$2"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 case "$approach" in
   A|B) ;;
