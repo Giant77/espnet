@@ -23,6 +23,7 @@ ngpu=1         # SERVER NOTE: set to 2 for DDP if running alone on server
 nj=4
 nbpe=2000
 
+# NOTE: --langs must be first params, else ignored"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --lang)

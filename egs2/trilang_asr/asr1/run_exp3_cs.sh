@@ -22,6 +22,7 @@ ngpu=1
 nj=4
 nbpe=2000
 
+# NOTE: --langs must be first params, else ignored"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --lang)

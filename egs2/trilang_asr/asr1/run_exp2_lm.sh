@@ -19,6 +19,7 @@ nj=4
 lm_weight=0.3  # tuned on dev; override with --lm_weight X
 nbpe=2000
 
+# NOTE: --langs must be first params, else ignored"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --lang)

@@ -21,6 +21,7 @@ stop_stage=13
 ngpu=1
 nj=4
 
+# NOTE: --langs must be first params, else ignored"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --lang)
