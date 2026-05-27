@@ -64,6 +64,6 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --test_sets "${lang}/test" \
     --asr_tag "mono_${lang}" \
     --gpu_inference true \
-    --expdir "exp_bpe2000" \
+    --expdir "exp_bpe${nbpe}" \
     --speed_perturb_factors "0.9 1.0 1.1" \
     "$@"
