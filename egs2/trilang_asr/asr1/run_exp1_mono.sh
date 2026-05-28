@@ -40,7 +40,7 @@ case "$lang" in
   *) echo "ERROR: --lang must be id, ar, or en"; exit 1 ;;
 esac
 
-nbpe=1000
+nbpe=5000
 
 echo "=== Experiment 1: Monolingual ASR — ${lang^^} ==="
 echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
