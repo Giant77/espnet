@@ -63,4 +63,5 @@ echo "=== Experiment 2: Shallow Fusion (XGLM-564M, lm_weight=${lm_weight}) ==="
     --inference_args "--lm_weight ${lm_weight}" \
     --asr_model_file "${tri_model}" \
     --download_model XGLM-564M \
+    --speed_perturb_factors "0.9 1.0 1.1" \
     "$@"

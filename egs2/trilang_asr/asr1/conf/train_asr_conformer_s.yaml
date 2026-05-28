@@ -59,7 +59,7 @@ specaug_conf:
     - 0.05
   num_time_mask: 5 # librispeech 100; pref: 2
 
-max_epoch: 5
+max_epoch: 60
 
 patience: 10
 val_scheduler_criterion:

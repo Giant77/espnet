@@ -74,6 +74,7 @@ fi
     --audio_format wav \
     --token_type bpe \
     --nbpe ${nbpe} \
+    --lm_train_text "data/${lang}/train/text" \
     --bpe_train_text "data/tri/train/text" \
     --nlsyms_txt "local/nlsyms.txt" \
     --asr_config "conf/finetune_asr_cs.yaml" \
@@ -85,4 +86,5 @@ fi
     --asr_tag "cs_finetune_${approach}" \
     --gpu_inference true \
     --asr_args "--init_param ${tri_model}" \
+    --speed_perturb_factors "0.9 1.0 1.1" \
     "$@"
