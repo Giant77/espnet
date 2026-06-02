@@ -22,15 +22,16 @@ decoder: transformer
 decoder_conf:
   attention_heads: 4
   linear_units: 2048
-  num_blocks: 6
+  num_blocks: 4
+  normalize_before: true
   dropout_rate: 0.1
   positional_dropout_rate: 0.1
   self_attention_dropout_rate: 0.1
-  src_attention_dropout_rate: 0.1
-  layer_drop_rate: 0.0 # librispeech 100
+  src_attention_dropout_rate: 0.15
+  layer_drop_rate: 0.1 # librispeech 100
 
 model_conf:
-  ctc_weight: 0.3 # per bab3.tex eq:persamaan-ctc α = 0.3
+  ctc_weight: 0.2 # per bab3.tex eq:persamaan-ctc α = 0.3
   lsm_weight: 0.1 # librispeech 100
   length_normalized_loss: false # librispeech 100
 
@@ -38,10 +39,11 @@ seed: 777
 
 optim: adam
 optim_conf:
-  lr: 0.002 # librispeech 100; pref: 0.001
+  lr: 0.001 # librispeech 100 : 0.002; pref: 0.001
+  weight_decay: 0.000001
 scheduler: warmuplr
 scheduler_conf:
-  warmup_steps: 15000 # librispeech 100; pref: 25000
+  warmup_steps: 25000 # librispeech 100: 15000; pref: 25000
 
 specaug: specaug
 specaug_conf:
@@ -59,9 +61,9 @@ specaug_conf:
     - 0.05
   num_time_mask: 5 # librispeech 100; pref: 2
 
-max_epoch: 60
+max_epoch: 20
 
-patience: 10
+# patience: 10
 val_scheduler_criterion:
   - valid
   - acc
@@ -70,11 +72,14 @@ best_model_criterion:
     - acc
     - max
 
+keep_nbest_models: 10
+use_amp: true
+
 batch_type: numel
 batch_bins: 300000 # 11 GB def: 350000 fallback 1: 300000; 2: 250000; 6 GB: 200000
 # batch_bins: 350000 # 11 GB fallback 1: 300000; 2: 250000; 6 GB: 200000
 accum_grad: 2
 
-grad_clip: 5
+grad_clip: 3
 
 num_workers: 2

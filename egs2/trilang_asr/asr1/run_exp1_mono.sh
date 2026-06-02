@@ -45,6 +45,8 @@ nbpe=5000
 echo "=== Experiment 1: Monolingual ASR — ${lang^^} ==="
 echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
 
+# TODO: re-add remove speed perturb for faster train time
+# --speed_perturb_factors "0.9 1.0 1.1" \
 ./asr.sh \
     --stage ${stage} \
     --stop_stage ${stop_stage} \
@@ -65,5 +67,4 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --test_sets "${lang}/test" \
     --asr_tag "mono_${lang}" \
     --gpu_inference true \
-    --speed_perturb_factors "0.9 1.0 1.1" \
     "$@"
