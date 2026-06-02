@@ -76,8 +76,7 @@ keep_nbest_models: 10
 use_amp: true
 
 batch_type: numel
-batch_bins: 300000 # 11 GB def: 350000 fallback 1: 300000; 2: 250000; 6 GB: 200000
-# batch_bins: 350000 # 11 GB fallback 1: 300000; 2: 250000; 6 GB: 200000
+batch_bins: 250000 # 11 GB def: 350000 fallback 1: 300000; 2: 250000; 6 GB: 200000
 accum_grad: 2
 
 grad_clip: 3
