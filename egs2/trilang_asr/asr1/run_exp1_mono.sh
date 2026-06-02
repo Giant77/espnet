@@ -67,4 +67,5 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --test_sets "${lang}/test" \
     --asr_tag "mono_${lang}" \
     --gpu_inference true \
+    --speed_perturb_factors "1.0" \
     "$@"
