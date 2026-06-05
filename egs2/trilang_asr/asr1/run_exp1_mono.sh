@@ -54,11 +54,12 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --nj ${nj} \
     --lang ${lang} \
     --audio_format wav \
+    --min_wav_duration \
+    --max_wav_duration \
     --token_type bpe \
     --nbpe ${nbpe} \
     --bpe_train_text "data/${lang}/train/text" \
     --lm_train_text "data/${lang}/train/text" \
-    --nlsyms_txt "local/nlsyms.txt" \
     --asr_config "conf/train_asr_conformer_s.yaml" \
     --inference_config "conf/decode_asr.yaml" \
     --use_lm false \
