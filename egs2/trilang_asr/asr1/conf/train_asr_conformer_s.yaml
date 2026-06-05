@@ -31,7 +31,7 @@ decoder_conf:
   layer_drop_rate: 0.1 # LS100: 0.0; testing 0.1
 
 model_conf:
-  ctc_weight: 0.4 # proposal ctc α(weight) = 0.3
+  ctc_weight: 0.2 # proposal ctc α(weight) = 0.3
   lsm_weight: 0.1
   length_normalized_loss: true # LS100: false
 
@@ -81,10 +81,10 @@ best_model_criterion:
 max_epoch: 20
 
 seed: 777
-use_amp: true
+use_amp: false
 
 batch_type: numel
 batch_bins: 250000 # 11 GB def: 350000 fallback 1: 300000; 2: 250000; 6 GB: 200000
 accum_grad: 2
-grad_clip: 3
+grad_clip: 5
 num_workers: 2

@@ -54,8 +54,8 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --nj ${nj} \
     --lang ${lang} \
     --audio_format wav \
-    --min_wav_duration \
-    --max_wav_duration \
+    --min_wav_duration 1.0 \
+    --max_wav_duration 30 \
     --token_type bpe \
     --nbpe ${nbpe} \
     --bpe_train_text "data/${lang}/train/text" \
