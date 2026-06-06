@@ -4,5 +4,3 @@ lm_weight: 0.0 # set to 0.3 for Experiment 2 (shallow fusion)
 penalty: 1.0
 maxlenratio: 1.0
 minlenratio: 0.4
-
-inference_nj: 2 # limit nj to 2; vram constraint

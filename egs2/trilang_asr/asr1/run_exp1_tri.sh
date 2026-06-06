@@ -16,25 +16,12 @@
 # set -u
 # set -o pipefail
 
-stage=1
+stage=2
 stop_stage=13
-ngpu=1         # SERVER NOTE: set to 2 for DDP if running alone on server
-               #   --ngpu 2 uses DDP; faster by ~1.7× but blocks 2 GPUs
+ngpu=1
 nj=4
-nbpe=2000
-
-# NOTE: --langs must be first params, else ignored"
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --lang)
-            lang="$2"
-            shift 2
-            ;;
-        *)
-            break
-            ;;
-    esac
-done
+inference_nj=2
+nbpe=10000
 
 echo "=== Experiment 1: Trilingual Base Model (NO CS) ==="
 echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
@@ -44,14 +31,16 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --stop_stage ${stop_stage} \
     --ngpu ${ngpu} \
     --nj ${nj} \
+    --inference_nj ${inference_nj} \
     --lang "trilingual" \
     --audio_format wav \
+    --min_wav_duration 1.0 \
+    --max_wav_duration 30 \
     --token_type bpe \
     --nbpe ${nbpe} \
     --bpe_train_text "data/tri/train/text" \
     --lm_train_text "data/tri/train/text" \
-    --nlsyms_txt "local/nlsyms.txt" \
-    --asr_config "conf/train_asr_conformer_s.yaml" \
+    --asr_config "conf/train_asr_conformer_s_tri.yaml" \
     --inference_config "conf/decode_asr.yaml" \
     --use_lm false \
     --train_set "tri/train" \

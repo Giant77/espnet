@@ -49,7 +49,7 @@ optim_conf:
 
 scheduler: warmuplr
 scheduler_conf:
-  warmup_steps: 25000 # LS100: 15000; pref: 25000
+  warmup_steps: 35000 # LS100: 15000; pref: 25000
 val_scheduler_criterion:
   - valid
   - acc
@@ -78,7 +78,7 @@ best_model_criterion:
     - acc
     - max
 
-max_epoch: 20
+max_epoch: 60
 
 seed: 777
 use_amp: false

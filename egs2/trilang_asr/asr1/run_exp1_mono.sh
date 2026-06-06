@@ -20,6 +20,8 @@ stage=2
 stop_stage=13
 ngpu=1
 nj=4
+inference_nj=2
+nbpe=5000
 
 # NOTE: --langs must be first params, else ignored"
 while [[ $# -gt 0 ]]; do
@@ -40,7 +42,6 @@ case "$lang" in
   *) echo "ERROR: --lang must be id, ar, or en"; exit 1 ;;
 esac
 
-nbpe=5000
 
 echo "=== Experiment 1: Monolingual ASR — ${lang^^} ==="
 echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
@@ -52,6 +53,7 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --stop_stage ${stop_stage} \
     --ngpu ${ngpu} \
     --nj ${nj} \
+    --inference_nj ${inference_nj} \
     --lang ${lang} \
     --audio_format wav \
     --min_wav_duration 1.0 \
