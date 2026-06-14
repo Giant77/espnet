@@ -3,7 +3,7 @@
 # Experiment 1 — Monolingual baselines (ID, AR, EN)
 # Wraps ESPnet2 asr.sh per language.
 # Usage:
-#   ./run_exp1_mono.sh --lang id [--stage 1] [--stop_stage 13]
+#   ./run_exp1_mono.sh --lang id [--stage 2] [--stop_stage 13]
 #
 # Server (RTX 2080 × 4, 2 parallel):
 #   CUDA_VISIBLE_DEVICES=0 ./run_exp1_mono.sh --lang id &
@@ -21,7 +21,7 @@ stop_stage=13
 ngpu=1
 nj=4
 inference_nj=2
-nbpe=5000
+nbpe=500
 
 # NOTE: --langs must be first params, else ignored"
 while [[ $# -gt 0 ]]; do
@@ -46,29 +46,30 @@ esac
 echo "=== Experiment 1: Monolingual ASR — ${lang^^} ==="
 echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
 
-# TODO: re-add remove speed perturb for faster train time
+# TODO: re-add  speed perturb later for faster train time 
 # --speed_perturb_factors "0.9 1.0 1.1" \
 ./asr.sh \
     --stage ${stage} \
     --stop_stage ${stop_stage} \
-    --ngpu ${ngpu} \
     --nj ${nj} \
     --inference_nj ${inference_nj} \
+    --gpu_inference true \
+    --ngpu ${ngpu} \
     --lang ${lang} \
     --audio_format wav \
+    --feats_type raw \
     --min_wav_duration 1.0 \
     --max_wav_duration 30 \
+    --use_lm false \
     --token_type bpe \
     --nbpe ${nbpe} \
-    --bpe_train_text "data/${lang}/train/text" \
-    --lm_train_text "data/${lang}/train/text" \
     --asr_config "conf/train_asr_conformer_s.yaml" \
     --inference_config "conf/decode_asr.yaml" \
-    --use_lm false \
+    --asr_tag "mono_${lang}_ctc5" \
     --train_set "${lang}/train" \
     --valid_set "${lang}/dev" \
     --test_sets "${lang}/test" \
-    --asr_tag "mono_${lang}" \
-    --gpu_inference true \
+    --bpe_train_text "data/${lang}/train/text" \
+    --lm_train_text "data/${lang}/train/text" \
     --speed_perturb_factors "1.0" \
     "$@"

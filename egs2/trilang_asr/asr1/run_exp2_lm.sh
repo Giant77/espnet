@@ -17,20 +17,7 @@ stop_stage=13
 ngpu=1
 nj=4
 lm_weight=0.3  # tuned on dev; override with --lm_weight X
-nbpe=2000
-
-# NOTE: --langs must be first params, else ignored"
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --lang)
-            lang="$2"
-            shift 2
-            ;;
-        *)
-            break
-            ;;
-    esac
-done
+nbpe=1000
 
 tri_model="exp/asr_tri_base/valid.acc.best.pth"
 if [ ! -f "${tri_model}" ]; then
@@ -44,24 +31,27 @@ echo "=== Experiment 2: Shallow Fusion (XGLM-564M, lm_weight=${lm_weight}) ==="
 ./asr.sh \
     --stage ${stage} \
     --stop_stage ${stop_stage} \
-    --ngpu ${ngpu} \
     --nj ${nj} \
+    --inference_nj ${inference_nj} \
+    --gpu_inference true \
+    --ngpu ${ngpu} \
     --lang "trilingual" \
     --audio_format wav \
+    --feats_type raw \
+    --min_wav_duration 1.0 \
+    --max_wav_duration 30 \
+    --use_lm true \
     --token_type bpe \
     --nbpe ${nbpe} \
-    --nlsyms_txt "local/nlsyms.txt" \
     --asr_config "conf/train_asr_conformer_s.yaml" \
     --inference_config "conf/decode_asr_lm.yaml" \
-    --use_lm true \
-    --lm_config "conf/train_lm_xglm.yaml" \
+    --inference_args "--lm_weight ${lm_weight}" \
+    --asr_tag "tri_lm_w${lm_weight}" \
     --train_set "tri/train" \
     --valid_set "tri/dev" \
     --test_sets "id/test ar/test en/test cs/test" \
-    --asr_tag "tri_lm_w${lm_weight}" \
-    --gpu_inference true \
-    --inference_args "--lm_weight ${lm_weight}" \
+    --lm_config "conf/train_lm_xglm.yaml" \
     --asr_model_file "${tri_model}" \
     --download_model XGLM-564M \
-    --speed_perturb_factors "0.9 1.0 1.1" \
+    --speed_perturb_factors "1.0" \
     "$@"

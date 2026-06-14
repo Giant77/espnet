@@ -1,6 +1,6 @@
 beam_size: 20 # LS100: 20
-ctc_weight: 0.2
+ctc_weight: 0.5
 lm_weight: 0.0 # set to 0.3 for Experiment 2 (shallow fusion)
-penalty: 1.0
-maxlenratio: 1.0
-minlenratio: 0.4
+penalty: 0.0
+maxlenratio: 0.0
+minlenratio: 0.0

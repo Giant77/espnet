@@ -21,7 +21,7 @@ stop_stage=13
 ngpu=1
 nj=4
 inference_nj=2
-nbpe=10000
+nbpe=1000
 
 echo "=== Experiment 1: Trilingual Base Model (NO CS) ==="
 echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
@@ -29,24 +29,25 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
 ./asr.sh \
     --stage ${stage} \
     --stop_stage ${stop_stage} \
-    --ngpu ${ngpu} \
     --nj ${nj} \
     --inference_nj ${inference_nj} \
+    --gpu_inference true \
+    --ngpu ${ngpu} \
     --lang "trilingual" \
     --audio_format wav \
+    --feats_type raw \
     --min_wav_duration 1.0 \
     --max_wav_duration 30 \
+    --use_lm false \
     --token_type bpe \
     --nbpe ${nbpe} \
-    --bpe_train_text "data/tri/train/text" \
-    --lm_train_text "data/tri/train/text" \
     --asr_config "conf/train_asr_conformer_s_tri.yaml" \
     --inference_config "conf/decode_asr.yaml" \
-    --use_lm false \
+    --asr_tag "tri_base" \
     --train_set "tri/train" \
     --valid_set "tri/dev" \
     --test_sets "id/test ar/test en/test cs/test" \
-    --asr_tag "tri_base" \
-    --gpu_inference true \
-    --speed_perturb_factors "0.9 1.0 1.1" \
+    --bpe_train_text "data/tri/train/text" \
+    --lm_train_text "data/tri/train/text" \
+    --speed_perturb_factors "1.0" \
     "$@"

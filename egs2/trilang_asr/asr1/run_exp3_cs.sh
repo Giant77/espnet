@@ -20,20 +20,7 @@ stage=1
 stop_stage=13
 ngpu=1
 nj=4
-nbpe=2000
-
-# NOTE: --langs must be first params, else ignored"
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --lang)
-            lang="$2"
-            shift 2
-            ;;
-        *)
-            break
-            ;;
-    esac
-done
+nbpe=1000
 
 case "$approach" in
   A|B) ;;
@@ -86,5 +73,5 @@ fi
     --asr_tag "cs_finetune_${approach}" \
     --gpu_inference true \
     --asr_args "--init_param ${tri_model}" \
-    --speed_perturb_factors "0.9 1.0 1.1" \
+    --speed_perturb_factors "1.0" \
     "$@"

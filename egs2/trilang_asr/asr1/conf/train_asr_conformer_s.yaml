@@ -1,10 +1,24 @@
-# Reference: ESPnet2 conformer recipe; reduced adim and layers
+batch_type: numel
+batch_bins: 1000000 # server: 1000000 - 32; local: 800000 - 40; Based on LS100: 2000000 -16
+accum_grad: 32
+max_epoch: 60
+patience: none
+init: none
+best_model_criterion:
+  - - valid
+    - acc # LS100: cer_ctc; local: acc - LS100 based
+    - max # LS100: min; local: max - LS100 based
+keep_nbest_models: 10
+
+# add seed for fixed results test
+seed: 777
+
 encoder: conformer
 encoder_conf:
-  output_size: 256 # LS100: 512; reduced to match GPU VRAM
+  output_size: 256
   attention_heads: 4
-  linear_units: 2048
-  num_blocks: 12
+  linear_units: 1024
+  num_blocks: 18
   dropout_rate: 0.1
   positional_dropout_rate: 0.1
   attention_dropout_rate: 0.1
@@ -18,47 +32,44 @@ encoder_conf:
   use_cnn_module: true
   cnn_module_kernel: 31
 
+# Add decoder LS100 based
 decoder: transformer
 decoder_conf:
   attention_heads: 4
-  linear_units: 2048
+  linear_units: 1024
   num_blocks: 4
   normalize_before: true
   dropout_rate: 0.1
   positional_dropout_rate: 0.1
   self_attention_dropout_rate: 0.1
-  src_attention_dropout_rate: 0.15 # LS100: 0.1; testing 0.15
-  layer_drop_rate: 0.1 # LS100: 0.0; testing 0.1
+  src_attention_dropout_rate: 0.15
 
-model_conf:
-  ctc_weight: 0.2 # proposal ctc α(weight) = 0.3
-  lsm_weight: 0.1
-  length_normalized_loss: true # LS100: false
-
-# Log-Mel Fbank acoustic extractions
-frontend: default
-frontend_conf:
-  n_fft: 512
-  win_length: 400
-  hop_length: 160
-
-optim: adam
-optim_conf:
-  lr: 0.001 # LS100 : 0.002; pref: 0.001
-  weight_decay: 0.00001 # LS100: 0.000001; test: 0.00001
-
-scheduler: warmuplr
-scheduler_conf:
-  warmup_steps: 25000 # LS100: 15000; pref: 25000
+# test on server; results: enable
 val_scheduler_criterion:
   - valid
   - acc
+num_workers: 2
+
+model_conf:
+  ctc_weight: 0.5 # LS100: 1.0; server: 0.5
+  lsm_weight: 0.1
+  length_normalized_loss: false
+
+optim: adam
+optim_conf:
+  lr: 0.002
+  weight_decay: 0.000001
+scheduler: warmuplr
+scheduler_conf:
+  warmup_steps: 15000
+
+# num_att_plot: 0 # hide to visualize attn for hybrid model
 
 specaug: specaug
 specaug_conf:
   apply_time_warp: true
   time_warp_window: 5
-  time_warp_mode: bicubic # LS100; pref: none
+  time_warp_mode: bicubic
   apply_freq_mask: true
   freq_mask_width_range:
     - 0
@@ -68,24 +79,4 @@ specaug_conf:
   time_mask_width_ratio_range:
     - 0.
     - 0.05
-  num_time_mask: 5 # LS100: 5; pref: 2
-
-patience: none # LS100: none; prevs 10
-
-keep_nbest_models: 10
-best_model_criterion:
-  - - valid
-    - acc
-    - max
-
-max_epoch: 20
-
-seed: 777
-use_amp: false
-
-init: xavier_uniform # TEST: for en only
-batch_type: numel
-batch_bins: 250000 # 11 GB def: 350000 fallback 1: 300000; 2: 250000; 6 GB: 200000
-accum_grad: 2
-grad_clip: 5
-num_workers: 2
+  num_time_mask: 5
