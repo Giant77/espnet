@@ -1,6 +1,6 @@
 beam_size: 20 # LS100: 20
 ctc_weight: 0.5
-lm_weight: 0.0 # set to 0.3 for Experiment 2 (shallow fusion)
+lm_weight: 0.0 # set to 0.3 for Experiment 2 (overwriten via run_exp2_lm.sh)
 penalty: 0.0
 maxlenratio: 0.0
 minlenratio: 0.0

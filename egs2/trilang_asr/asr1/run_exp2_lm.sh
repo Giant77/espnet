@@ -12,11 +12,11 @@
 # set -u
 # set -o pipefail
 
-stage=12       # Start directly from decoding — ASR model reused from exp1
+stage=12 # start directly from decoding — ASR & LM model reused from exp1
 stop_stage=13
 ngpu=1
 nj=4
-lm_weight=0.3  # tuned on dev; override with --lm_weight X
+lm_weight=0.3
 nbpe=1000
 
 tri_model="exp/asr_tri_base/valid.acc.best.pth"
@@ -40,18 +40,19 @@ echo "=== Experiment 2: Shallow Fusion (XGLM-564M, lm_weight=${lm_weight}) ==="
     --feats_type raw \
     --min_wav_duration 1.0 \
     --max_wav_duration 30 \
-    --use_lm true \
     --token_type bpe \
     --nbpe ${nbpe} \
-    --asr_config "conf/train_asr_conformer_s.yaml" \
-    --inference_config "conf/decode_asr_lm.yaml" \
+    --use_lm true \
+    --lm_config "conf/train_lm_opt.yaml" \
+    --asr_config "conf/train_asr_conformer_tri.yaml" \
+    --inference_config "conf/decode_asr.yaml" \
     --inference_args "--lm_weight ${lm_weight}" \
-    --asr_tag "tri_lm_w${lm_weight}" \
+    --asr_tag "tri_lm{lm_weight}" \
     --train_set "tri/train" \
     --valid_set "tri/dev" \
     --test_sets "id/test ar/test en/test cs/test" \
-    --lm_config "conf/train_lm_xglm.yaml" \
     --asr_model_file "${tri_model}" \
-    --download_model XGLM-564M \
+    --bpe_train_text "data/tri/train/text" \
+    --lm_train_text "data/tri/train/text" \
     --speed_perturb_factors "1.0" \
     "$@"

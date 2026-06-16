@@ -60,10 +60,10 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --feats_type raw \
     --min_wav_duration 1.0 \
     --max_wav_duration 30 \
-    --use_lm false \
     --token_type bpe \
     --nbpe ${nbpe} \
-    --asr_config "conf/train_asr_conformer_s.yaml" \
+    --use_lm false \
+    --asr_config "conf/train_asr_conformer.yaml" \
     --inference_config "conf/decode_asr.yaml" \
     --asr_tag "mono_${lang}_ctc5" \
     --train_set "${lang}/train" \

@@ -26,6 +26,7 @@ nbpe=1000
 echo "=== Experiment 1: Trilingual Base Model (NO CS) ==="
 echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
 
+# train LM, but skip usage (lm_weight: 0); usage on exp2
 ./asr.sh \
     --stage ${stage} \
     --stop_stage ${stop_stage} \
@@ -38,10 +39,11 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --feats_type raw \
     --min_wav_duration 1.0 \
     --max_wav_duration 30 \
-    --use_lm false \
     --token_type bpe \
     --nbpe ${nbpe} \
-    --asr_config "conf/train_asr_conformer_s_tri.yaml" \
+    --use_lm true \
+    --lm_config "conf/train_lm_opt.yaml" \
+    --asr_config "conf/train_asr_conformer_tri.yaml" \
     --inference_config "conf/decode_asr.yaml" \
     --asr_tag "tri_base" \
     --train_set "tri/train" \
