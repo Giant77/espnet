@@ -21,7 +21,7 @@ stop_stage=13
 ngpu=1
 nj=4
 inference_nj=2
-nbpe=1000
+nbpe=2000
 
 echo "=== Experiment 1: Trilingual Base Model (NO CS) ==="
 echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
@@ -45,7 +45,7 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --lm_config "conf/train_lm_opt.yaml" \
     --asr_config "conf/train_asr_conformer_tri.yaml" \
     --inference_config "conf/decode_asr.yaml" \
-    --asr_tag "tri_base" \
+    --asr_tag "tri_base_bpe${nbpe}" \
     --train_set "tri/train" \
     --valid_set "tri/dev" \
     --test_sets "id/test ar/test en/test cs/test" \

@@ -1,10 +1,8 @@
-batch_type: length
-batch_bins: 10000
-accum_grad: 20
-# num_iters_per_epoch: 25000
-max_epoch: 20 # from voxtlm 250; test on 50; remove iter/epoch
+batch_type: numel
+batch_bins: 1000000
+accum_grad: 48
+max_epoch: 10
 num_workers: 2
-# grad_clip: 1.0
 seed: 777
 
 patience: none
@@ -17,10 +15,6 @@ keep_nbest_models: 10
 lm: transformer_opt
 lm_conf:
   opt_name: "facebook/opt-350m"
-
-model_conf:
-  lsm_weight: 0.1
-  length_normalized_loss: true
 
 optim: adam
 optim_conf:

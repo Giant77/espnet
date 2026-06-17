@@ -55,23 +55,25 @@ fi
 ./asr.sh \
     --stage ${stage} \
     --stop_stage ${stop_stage} \
-    --ngpu ${ngpu} \
     --nj ${nj} \
+    --inference_nj ${inference_nj} \
+    --gpu_inference true \
+    --ngpu ${ngpu} \
     --lang "trilingual_cs" \
     --audio_format wav \
+    --feats_type raw \
+    --min_wav_duration 1.0 \
+    --max_wav_duration 30 \
     --token_type bpe \
     --nbpe ${nbpe} \
-    --lm_train_text "data/${lang}/train/text" \
-    --bpe_train_text "data/tri/train/text" \
-    --nlsyms_txt "local/nlsyms.txt" \
-    --asr_config "conf/finetune_asr_cs.yaml" \
-    --inference_config "conf/decode_asr.yaml" \
     --use_lm false \
+    --asr_config "conf/finetune_asr_cs.yaml" \
+    --asr_args "--init_param ${tri_model}" \
+    --inference_config "conf/decode_asr.yaml" \
+    --inference_args "--lm_weight 0.3" \
+    --asr_tag "cs_finetune" \
     --train_set "${cs_train}" \
     --valid_set "${cs_dev}" \
     --test_sets "${cs_test} id/test ar/test en/test" \
-    --asr_tag "cs_finetune_${approach}" \
-    --gpu_inference true \
-    --asr_args "--init_param ${tri_model}" \
     --speed_perturb_factors "1.0" \
     "$@"
