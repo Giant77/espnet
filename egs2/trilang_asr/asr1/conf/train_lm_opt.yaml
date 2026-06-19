@@ -5,7 +5,7 @@ max_epoch: 10
 num_workers: 2
 seed: 777
 
-patience: none
+patience: 2
 best_model_criterion:
   - - valid
     - acc # voxtlm: loss
@@ -18,8 +18,8 @@ lm_conf:
 
 optim: adam
 optim_conf:
-  lr: 0.0005 # voxtlm: 0.0003; test: 0.0005 lower train data
-  weight_decay: 0.00001 # voxtlm: 1e-06; test: 1e-5
+  lr: 0.0005
+  weight_decay: 0.00001
 scheduler: warmuplr
 scheduler_conf:
-  warmup_steps: 2000 # voxtlm: 2500; test: 2500 small train data
+  warmup_steps: 2000

@@ -17,7 +17,7 @@ stop_stage=13
 ngpu=1
 nj=4
 lm_weight=0.3
-nbpe=2000 # testing best nbpe for tri
+nbpe=1000
 
 tri_model="exp/asr_tri_base/valid.acc.best.pth"
 if [ ! -f "${tri_model}" ]; then

@@ -1,7 +1,7 @@
 batch_type: numel
-batch_bins: 1000000
+batch_bins: 1000000 # server: 1000000 - 32; local: 800000 - 40; Based on LS100: 2000000 -16
 accum_grad: 32
-max_epoch: 10 # tmp for testing
+max_epoch: 60
 patience: none
 init: none
 best_model_criterion:
@@ -51,14 +51,14 @@ val_scheduler_criterion:
 num_workers: 2
 
 model_conf:
-  ctc_weight: 0.5 # test hybrid model
+  ctc_weight: 0.5
   lsm_weight: 0.1
   length_normalized_loss: false
 
 optim: adam
 optim_conf:
-  lr: 0.002 # plateud at lr 0.0002
-  weight_decay: 0.000001
+  lr: 0.0005 # lower max lr to 5e-4
+  weight_decay: 0.00001 # increase to 1e-5
 scheduler: warmuplr
 scheduler_conf:
   warmup_steps: 15000

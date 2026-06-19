@@ -57,7 +57,7 @@ model_conf:
 
 optim: adam
 optim_conf:
-  lr: 0.002
+  lr: 0.002 # epoch 60 peaked at 6e-4; didnt want to risk changes
   weight_decay: 0.000001
 scheduler: warmuplr
 scheduler_conf:
