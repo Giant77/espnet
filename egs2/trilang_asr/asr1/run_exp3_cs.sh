@@ -25,14 +25,14 @@
 # =============================================================================
 
 # ---- phase toggles (turn off whichever you don't need to re-run) -----------
-run_data_prep=true
+run_data_prep=false
 run_finetune=true
 run_decode_nolm=true
 run_decode_lm=true
 
 # ---- run controls ------------------------------------------------------------
 # approach="${1:?Usage: run_exp3.sh <A|B> [extra asr.sh args...]   (A=TTS synthetic CS, B=audio concat CS)}"
-approach="mms"
+approach=""
 shift
 # TODO: changes approachs, current plans:
 # approach pure (data/cs/...)
@@ -42,6 +42,7 @@ ngpu=1
 nj=4
 inference_nj=2
 lm_weight=0.3
+speed_perturb_factors="1.0"
 
 nbpe_cs=1000 # 500 or 1k
 
@@ -94,7 +95,7 @@ if [ "${run_data_prep}" = true ]; then
         --max_wav_duration 30 \
         --token_type bpe \
         --nbpe ${nbpe_cs} \
-        --speed_perturb_factors "1.0" \
+        --speed_perturb_factors ${speed_perturb_factors} \
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
@@ -116,7 +117,7 @@ if [ "${run_finetune}" = true ]; then
     echo "    pretrained_model=${tri_model}"
     echo
     echo
-    
+
     ./asr.sh \
         --stage 11 \
         --stop_stage 11 \
@@ -135,7 +136,7 @@ if [ "${run_finetune}" = true ]; then
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
-        --speed_perturb_factors "1.0" \
+        --speed_perturb_factors ${speed_perturb_factors} \
         "$@"
 fi
 
@@ -163,6 +164,7 @@ if [ "${run_decode_nolm}" = true ]; then
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
+        --speed_perturb_factors ${speed_perturb_factors} \
         "$@"
 fi
 
@@ -197,6 +199,7 @@ if [ "${run_decode_lm}" = true ]; then
             --train_set "${cs_train}" \
             --valid_set "${cs_dev}" \
             --test_sets "${test_sets_all}" \
+            --speed_perturb_factors ${speed_perturb_factors} \
             "$@"
 
     else
