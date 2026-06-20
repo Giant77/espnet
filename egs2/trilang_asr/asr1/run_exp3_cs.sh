@@ -31,7 +31,8 @@ run_decode_nolm=true
 run_decode_lm=true
 
 # ---- run controls ------------------------------------------------------------
-approach="${1:?Usage: run_exp3.sh <A|B> [extra asr.sh args...]   (A=TTS synthetic CS, B=audio concat CS)}"
+# approach="${1:?Usage: run_exp3.sh <A|B> [extra asr.sh args...]   (A=TTS synthetic CS, B=audio concat CS)}"
+approach="mms"
 shift
 # TODO: changes approachs, current plans:
 # approach pure (data/cs/...)
@@ -42,9 +43,9 @@ nj=4
 inference_nj=2
 lm_weight=0.3
 
-nbpe_cs=500 # 500 or 1k
+nbpe_cs=1000 # 500 or 1k
 
-tri_model="exp/asr_tri_base_bpe1000_lr5e4_warm15k_epoch100/valid.acc.ave.pth"
+tri_model="exp/asr_tri_base/valid.acc.ave_10best.pth"
 
 cs_lm_exp="lm_train_lm_opt_trilingual_bpe${nbpe_cs}"
 cs_train="cs_${approach}/train"
@@ -67,12 +68,16 @@ fi
 
 test_sets_all="${cs_test} id/test ar/test en/test"
 
+# echo $cs_train
+# echo $cs_dev
+# echo $test_sets_all
+
 echo "=== Experiment 3: CS Fine-tuning (Approach ${approach}) ==="
 
 # -----------------------------------------------------------------------------
-# Stage A — CS data prep + fresh 500-BPE or 1k-BPE token list (asr.sh stages 2-5)
+# Stage 1 — CS data prep + fresh 500-BPE or 1k-BPE token list (asr.sh stages 2-5)
 # Must carry the same audio/feat/bpe flags Phase 1 uses below: stage 5 is where
-# the 500-token sentencepiece model gets trained (on cs_train text), and the
+# the sentencepiece model gets trained (on cs_train text), and the
 # dump/ layout built here is what Phase 1 picks up when it resumes at stage 10.
 # -----------------------------------------------------------------------------
 if [ "${run_data_prep}" = true ]; then
@@ -92,7 +97,11 @@ if [ "${run_data_prep}" = true ]; then
         --speed_perturb_factors "1.0" \
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
-        --test_sets "${test_sets_all}"
+        --test_sets "${test_sets_all}" \
+        --bpe_train_text "data/cs/train/text" \
+        --lm_train_text "data/cs/train/text"
+
+    echo
     echo "=== CS data preparation done! ==="
 fi
 
@@ -105,8 +114,11 @@ fi
 if [ "${run_finetune}" = true ]; then
     echo "    Phase 1: Fine-tuning on CS data (stages 10-11)"
     echo "    pretrained_model=${tri_model}"
+    echo
+    echo
+    
     ./asr.sh \
-        --stage 10 \
+        --stage 11 \
         --stop_stage 11 \
         --nj ${nj} \
         --ngpu ${ngpu} \
@@ -119,7 +131,7 @@ if [ "${run_finetune}" = true ]; then
         --pretrained_model "${tri_model}" \
         --ignore_init_mismatch true \
         --asr_config "conf/finetune_asr_cs.yaml" \
-        --asr_tag "cs_ft_${approach}" \
+        --asr_tag "cs_ft_bpe${nbpe_cs}_${approach}" \
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
@@ -132,6 +144,9 @@ fi
 # -----------------------------------------------------------------------------
 if [ "${run_decode_nolm}" = true ]; then
     echo "    Phase 2a: Decoding without LM"
+    echo
+    echo
+
     ./asr.sh \
         --stage 12 \
         --stop_stage 13 \
@@ -161,6 +176,9 @@ fi
 if [ "${run_decode_lm}" = true ]; then
     if [ -n "${cs_lm_exp}" ]; then
         echo "    Phase 2b: Decoding with shallow-fused LM (lm_exp=${cs_lm_exp}, lm_weight=${lm_weight})"
+        echo
+        echo
+
         ./asr.sh \
             --stage 12 \
             --stop_stage 13 \
@@ -180,6 +198,7 @@ if [ "${run_decode_lm}" = true ]; then
             --valid_set "${cs_dev}" \
             --test_sets "${test_sets_all}" \
             "$@"
+
     else
         echo "    Phase 2b SKIPPED: cs_lm_exp is not set."
         echo "    Fine-tune/replace the OPT LM's vocab layers on the ${nbpe_cs}-token CS BPE first"

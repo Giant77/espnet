@@ -57,11 +57,11 @@ model_conf:
 
 optim: adam
 optim_conf:
-  lr: 0.00005 # lower max lr to 5e-5 for finetuning
-  weight_decay: 0.000001 # lower to 1e-6
+  lr: 0.00005 # local: 1e-4, 2e-4; server 5e-5, 1e-5 
+  weight_decay: 0.000001 # was 0.00001(1e-5); local 5e-6; server 1e-6
 scheduler: warmuplr
 scheduler_conf:
-  warmup_steps: 5000 # lower warmup; if overfit test on 1k, 2k
+  warmup_steps: 500 # local 1k; server 1k, 500
 
 # num_att_plot: 0 # hide to visualize attn for hybrid model
 
