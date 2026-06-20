@@ -1,7 +1,7 @@
 batch_type: numel
 batch_bins: 1000000
 accum_grad: 48
-max_epoch: 10
+max_epoch: 20
 num_workers: 2
 seed: 777
 
