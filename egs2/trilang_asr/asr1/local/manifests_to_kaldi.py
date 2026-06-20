@@ -2,8 +2,8 @@
 manifests_to_kaldi.py
 
 Staged pipeline:
-  Stage 1 — preprocess INF23_CS and MMS_CS audio (convert/resample to wav)
-  Stage 2 — preprocess INF23_CS and MMS_CS transcripts (normalize text)
+  Stage 1 — preprocess INF23_CS and cs_mms audio (convert/resample to wav)
+  Stage 2 — preprocess INF23_CS and cs_mms transcripts (normalize text)
   Stage 3 — convert manifests (existing lang_groups + stage2 CS outputs) to
             Kaldi data dirs
 
@@ -17,13 +17,13 @@ import os
 import argparse
 import subprocess
 from collections import defaultdict
-from preprocess_CS import (
+from preprocess_cs import (
     stage1_inf23_cs,
-    stage1_mms_cs,
+    stage1_cs_mms,
     stage2_inf23_cs,
-    stage2_mms_cs,
+    stage2_cs_mms,
     load_inf23_cs_records,
-    load_mms_cs_records,
+    load_cs_mms_records,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -180,26 +180,26 @@ def split_records(records: list, train_ratio=0.8, dev_ratio=0.1, seed=777):
 # ─────────────────────────────────────────────────────────────────────────────
 def run_stage1(base_dir: str) -> None:
     print("=" * 70)
-    print("STAGE 1: preprocessing INF23_CS and MMS_CS audio")
+    print("STAGE 1: preprocessing INF23_CS and cs_mms audio")
     print("=" * 70)
     stage1_inf23_cs(base_dir)
-    stage1_mms_cs(base_dir)
+    stage1_cs_mms(base_dir)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 2 — transcript preprocessing
 # ─────────────────────────────────────────────────────────────────────────────
 def run_stage2(base_dir: str) -> None:
     print("=" * 70)
-    print("STAGE 2: preprocessing INF23_CS and MMS_CS transcripts")
+    print("STAGE 2: preprocessing INF23_CS and cs_mms transcripts")
     print("=" * 70)
     stage2_inf23_cs(base_dir)
-    stage2_mms_cs(base_dir)
+    stage2_cs_mms(base_dir)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 3 — manifests to kaldi
 # ─────────────────────────────────────────────────────────────────────────────
 def run_stage3(base_dir: str, manifest_dir: str, output_data_dir: str,
-               mms_cs_data_dir: str, use_mms: bool, dry_run: bool) -> list:
+               cs_mms_data_dir: str, use_mms: bool, dry_run: bool) -> list:
     print("=" * 70)
     print("STAGE 3: converting manifests to Kaldi data dirs")
     print("=" * 70)
@@ -259,17 +259,22 @@ def run_stage3(base_dir: str, manifest_dir: str, output_data_dir: str,
             print(f"{loader.__name__}: adding {len(extra_records)} utterances to {lang}/test")
             all_lang_splits[lang]["test"].extend(extra_records)
 
-    # ─── MMS_CS: always written standalone; optionally folded into data/cs ──
-    mms_splits = load_mms_cs_records(base_dir)
-    for split in ["train", "dev", "test"]:
-        out_dir = os.path.join(mms_cs_data_dir, split)
-        write_kaldi_dir(mms_splits[split], out_dir, dry_run=dry_run, base_dir=base_dir)
-        output_dirs.append(out_dir)
+    # ─── cs_mms: always written standalone; optionally folded into data/cs ──
+    mms_splits = load_cs_mms_records(base_dir)
+    # for split in ["train", "dev", "test"]:
+    #     out_dir = os.path.join(cs_mms_data_dir, split)
+    #     write_kaldi_dir(mms_splits[split], out_dir, dry_run=dry_run, base_dir=base_dir)
+    #     output_dirs.append(out_dir)
 
+    # if use_mms:
+        # mms_splits[split].extend(all_lang_splits["cs"][split])
+        # for split in ["train", "dev", "test"]:
+        #     print(f"load_cs_mms_records: folding {len(mms_splits[split])} utterances into cs/{split}")
+        #     all_lang_splits["cs"][split].extend(mms_splits[split])
     if use_mms:
         for split in ["train", "dev", "test"]:
-            print(f"load_mms_cs_records: folding {len(mms_splits[split])} utterances into cs/{split}")
-            all_lang_splits["cs"][split].extend(mms_splits[split])
+            print(f"run_stage3: folding {len(all_lang_splits['cs'][split])} primary cs utterances into cs_mms/{split}")
+            mms_splits[split].extend(all_lang_splits["cs"][split])
 
     # Write per-language
     for lang, splits in all_lang_splits.items():
@@ -302,10 +307,13 @@ def run_stage3(base_dir: str, manifest_dir: str, output_data_dir: str,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--dry-run", action='store_true')
-    parser.add_argument("--use_mms", action='store_true', default=False,
-                         help="If set, MMS_CS records are also folded into "
-                              "data/cs (in addition to the standalone "
-                              "mms_cs_data_dir write). Default: standalone only.")
+    parser.add_argument("--use_mms", action='store_true', default=True,
+                         help="If set (default: True), primary cs records "
+                              "are folded into mms_output_data_dir (in addition "
+                              "to data/cs being written normally). Pass "
+                              "--no-use_mms to write cs_mms standalone only.")
+    parser.add_argument("--no_use_mms", dest="use_mms", action='store_false',
+                         help="Disable folding primary cs records into mms_output_data_dir.")
     parser.add_argument("--fix_data", action='store_true', default=False,
                          help="If set, run data validation, and data dir " 
                          "using default ESPnet scripts")
@@ -319,8 +327,8 @@ if __name__ == '__main__':
     base_dir = "downloads"
     manifest_dir = os.path.join(base_dir, "processed", "manifests", "balanced")
 
-    base_output_data_dir = "data"
-    mms_output_data_dir = os.path.join(base_output_data_dir, "mms_cs")        
+    base_output_data_dir = "data_test"
+    mms_output_data_dir = os.path.join(base_output_data_dir, "cs_mms")        
 
     if (args.stage <= 1 <= args.stop_stage) and not args.dry_run:
         run_stage1(base_dir)
@@ -333,7 +341,7 @@ if __name__ == '__main__':
             base_dir=base_dir,
             manifest_dir=manifest_dir,
             output_data_dir=base_output_data_dir,
-            mms_cs_data_dir=mms_output_data_dir,
+            cs_mms_data_dir=mms_output_data_dir,
             use_mms=args.use_mms,
             dry_run=args.dry_run,
         )

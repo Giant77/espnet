@@ -225,7 +225,7 @@ def stage1_inf23_cs(base_dir: str) -> list:
     return records
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MMS_CS — stage 1 (audio)
+# CS_MMS — stage 1 (audio)
 # ─────────────────────────────────────────────────────────────────────────────
 _MMS_SPLIT_FILES = {
     "train": "train.csv",
@@ -233,7 +233,7 @@ _MMS_SPLIT_FILES = {
     "test": "test.csv",
 }
 
-def _stage1_mms_cs_split(pair_dir: str, pair: str, split: str, csv_name: str,
+def _stage1_cs_mms_split(pair_dir: str, pair: str, split: str, csv_name: str,
                           out_wav_dir: str) -> list:
     """
     Converts audio for one split CSV (train.csv / val.csv / test.csv) of a
@@ -249,7 +249,7 @@ def _stage1_mms_cs_split(pair_dir: str, pair: str, split: str, csv_name: str,
         rows = list(csv.DictReader(f))
 
     records = []
-    for row in tqdm(rows, desc=f"Stage 1: MMS_CS {pair}/{csv_name}"):
+    for row in tqdm(rows, desc=f"Stage 1: CS_MMS {pair}/{csv_name}"):
         sentence_id = (row.get('sentence_id') or '').strip()
         audio_rel_path = (row.get('audio_path') or '').strip()
         text = (row.get('sentence') or '').strip()
@@ -279,18 +279,18 @@ def _stage1_mms_cs_split(pair_dir: str, pair: str, split: str, csv_name: str,
 
     return records
 
-def stage1_mms_cs(base_dir: str) -> list:
+def stage1_cs_mms(base_dir: str) -> list:
     """
-    Converts MMS_CS audio (cs_mms/<pair>/{train,val,test}.csv) to
+    Converts CS_MMS audio (cs_mms/<pair>/{train,val,test}.csv) to
     16kHz mono wav. Writes wavs to
-    downloads/mms_cs/processed/<pair>/wavs/ and a single combined
+    downloads/cs_mms/processed/<pair>/wavs/ and a single combined
     stage1 manifest (all pairs/splits) to
-    downloads/mms_cs/processed/manifests/stage1.json.
+    downloads/cs_mms/processed/manifests/stage1.json.
     metadata.csv is ignored.
     """
-    source_root = os.path.join(base_dir, "mms_cs")
+    source_root = os.path.join(base_dir, "cs_mms")
 
-    out_root = os.path.join(base_dir, "mms_cs", "processed")
+    out_root = os.path.join(base_dir, "cs_mms", "processed")
     manifest_path = os.path.join(out_root, "manifests", "stage1.json")
 
     if not os.path.isdir(source_root):
@@ -308,12 +308,12 @@ def stage1_mms_cs(base_dir: str) -> list:
         os.makedirs(out_wav_dir, exist_ok=True)
 
         for split, csv_name in _MMS_SPLIT_FILES.items():
-            recs = _stage1_mms_cs_split(pair_dir, pair, split, csv_name, out_wav_dir)
-            print(f"stage1_mms_cs: {pair}/{csv_name}: {len(recs)} utterances")
+            recs = _stage1_cs_mms_split(pair_dir, pair, split, csv_name, out_wav_dir)
+            print(f"stage1_cs_mms: {pair}/{csv_name}: {len(recs)} utterances")
             records.extend(recs)
 
     save_manifest(records, manifest_path)
-    print(f"stage1_mms_cs: wrote {len(records)} records -> {manifest_path}")
+    print(f"stage1_cs_mms: wrote {len(records)} records -> {manifest_path}")
     return records
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -364,12 +364,12 @@ def stage2_inf23_cs(base_dir: str) -> list:
         desc="Stage 2: INF23_CS transcripts",
     )
 
-def stage2_mms_cs(base_dir: str) -> list:
-    out_root = os.path.join(base_dir, "mms_cs", "processed", "manifests")
+def stage2_cs_mms(base_dir: str) -> list:
+    out_root = os.path.join(base_dir, "cs_mms", "processed", "manifests")
     return stage2_normalize_dataset(
         stage1_manifest_path=os.path.join(out_root, "stage1.json"),
         out_manifest_path=os.path.join(out_root, "records.json"),
-        desc="Stage 2: MMS_CS transcripts",
+        desc="Stage 2: CS_MMS transcripts",
     )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -383,13 +383,13 @@ def load_inf23_cs_records(base_dir: str) -> list:
         return []
     return load_manifest_json(path)
 
-def load_mms_cs_records(base_dir: str) -> dict:
+def load_cs_mms_records(base_dir: str) -> dict:
     """
-    Loads stage2 output for MMS_CS, regrouped into
+    Loads stage2 output for CS_MMS, regrouped into
     {"train": [...], "dev": [...], "test": [...]} using each record's
     "split" field (preserves the dataset's own pre-existing split).
     """
-    path = os.path.join(base_dir, "mms_cs", "processed", "manifests", "records.json")
+    path = os.path.join(base_dir, "cs_mms", "processed", "manifests", "records.json")
     splits = {"train": [], "dev": [], "test": []}
     if not os.path.exists(path):
         print(f"WARN: Missing {path} (run stage 1+2 first)")
