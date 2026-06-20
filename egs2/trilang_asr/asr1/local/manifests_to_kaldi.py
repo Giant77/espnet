@@ -1,15 +1,30 @@
 """
 manifests_to_kaldi.py
+
+Staged pipeline:
+  Stage 1 — preprocess INF23_CS and MMS_CS audio (convert/resample to wav)
+  Stage 2 — preprocess INF23_CS and MMS_CS transcripts (normalize text)
+  Stage 3 — convert manifests (existing lang_groups + stage2 CS outputs) to
+            Kaldi data dirs
+
+Each stage can be run independently and resumed via --stage / --stop_stage.
+Stage 1 and 2 persist their output as JSON manifests on disk, so re-running
+stage 2 (for example) does not require re-running stage 1.
 """
 
 import json
 import os
-import re
-import csv
-import string
 import argparse
 import subprocess
 from collections import defaultdict
+from preprocess_CS import (
+    stage1_inf23_cs,
+    stage1_mms_cs,
+    stage2_inf23_cs,
+    stage2_mms_cs,
+    load_inf23_cs_records,
+    load_mms_cs_records,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helper functions
@@ -42,91 +57,6 @@ def extract_records(manifest: dict) -> dict:
         return {"all": manifest.get("records", [])}
 
     return splits
-
-# ─────────────────────────────────────────────────────────────────────────────
-# INF23_CS Loader
-# ─────────────────────────────────────────────────────────────────────────────
-def load_inf23_cs_transcript(tsv_path: str) -> dict:
-    """Headerless TSV: <id>\\t<transcript>. Returns {str(int(id)): text}."""
-    transcripts = {}
-    with open(tsv_path, encoding='utf-8', newline='') as f:
-        reader = csv.reader(f, delimiter='\t')
-        for row in reader:
-            if not row or len(row) < 2:
-                continue
-
-            utt_key = row[0].strip()
-            text = row[1].strip()
-
-            if not utt_key:
-                continue
-
-            try:
-                transcripts[str(int(utt_key))] = text
-            except ValueError:
-                print(f"WARN: non-numeric id in {tsv_path}: {row[0]!r}")
-
-    return transcripts
-
-def parse_inf23_cs_wav(wav_path: str):
-    """
-    Returns (speaker_id, audio_id) for a wav file under INF23_CS.
-    Filename (basename, regardless of nesting depth) is always
-    "[spkid]_audio[X].wav".
-    """
-    wav_name_re = re.compile(r'^(?P<spk>\d+)_audio(?P<audio_id>\d+)', re.IGNORECASE)
-    basename = os.path.splitext(os.path.basename(wav_path))[0]
-
-    m = wav_name_re.match(basename)
-    if not m:
-        return None, None
-
-    return m.group('spk'), str(int(m.group('audio_id')))
-
-def load_inf23_cs(base_dir: str) -> list:
-    """Loads INF23_CS as a flat list of records."""
-    source_root = os.path.join(base_dir, "INF23_CS")
-    tsv_path = os.path.join(source_root, "transcript.tsv")
-
-    if not os.path.exists(tsv_path):
-        print(f"WARN: Missing {tsv_path}")
-        return []
-
-    transcripts = load_inf23_cs_transcript(tsv_path)
-
-    records = []
-    seen_utt_ids = set()
-
-    for root, _dirs, files in os.walk(source_root):
-        for fn in sorted(files):
-            if not fn.lower().endswith('.wav'):
-                continue
-
-            wav_path = os.path.join(root, fn)
-            spk, audio_id = parse_inf23_cs_wav(wav_path)
-
-            if spk is None or audio_id is None:
-                print(f"WARN: Could not parse speaker/audio id from {wav_path}")
-                continue
-
-            text = transcripts.get(audio_id)
-            if text is None:
-                print(f"WARN: No transcript for id={audio_id} ({wav_path})")
-                continue
-
-            utt_id = f"INF23_CS_{spk}_audio{audio_id}"
-            if utt_id in seen_utt_ids:
-                utt_id = f"{utt_id}_{len(seen_utt_ids)}"
-            seen_utt_ids.add(utt_id)
-
-            records.append({
-                "utt_id": utt_id,
-                "wav_path": wav_path.replace('\\', '/'),
-                "text": text,
-                "speaker": f"INF23_CS_{spk}",
-            })
-
-    return records
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Path Normalization
@@ -246,16 +176,33 @@ def split_records(records: list, train_ratio=0.8, dev_ratio=0.1, seed=777):
     return train, dev, test
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Main
+# Stage 1 — audio preprocessing
 # ─────────────────────────────────────────────────────────────────────────────
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--dry-run", action='store_true')
-    args = parser.parse_args()
+def run_stage1(base_dir: str) -> None:
+    print("=" * 70)
+    print("STAGE 1: preprocessing INF23_CS and MMS_CS audio")
+    print("=" * 70)
+    stage1_inf23_cs(base_dir)
+    stage1_mms_cs(base_dir)
 
-    base_dir = "downloads"
-    manifest_dir = os.path.join(base_dir, "processed", "manifests", "balanced")
-    output_data_dir = "data"
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2 — transcript preprocessing
+# ─────────────────────────────────────────────────────────────────────────────
+def run_stage2(base_dir: str) -> None:
+    print("=" * 70)
+    print("STAGE 2: preprocessing INF23_CS and MMS_CS transcripts")
+    print("=" * 70)
+    stage2_inf23_cs(base_dir)
+    stage2_mms_cs(base_dir)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 3 — manifests to kaldi
+# ─────────────────────────────────────────────────────────────────────────────
+def run_stage3(base_dir: str, manifest_dir: str, output_data_dir: str,
+               mms_cs_data_dir: str, use_mms: bool, dry_run: bool) -> list:
+    print("=" * 70)
+    print("STAGE 3: converting manifests to Kaldi data dirs")
+    print("=" * 70)
 
     lang_groups = {
         "id": ["id_cv", "id_fleurs",
@@ -298,9 +245,10 @@ if __name__ == '__main__':
 
     # ─── Extra test-only sources ───────────────────────────────────────────
     # These are appended directly to a split's "test" list and never pass
-    # through split_records.
+    # through split_records. Reads stage2 output (records.json); run
+    # stage 1+2 first.
     extra_test_sources = {
-        "cs": [load_inf23_cs],
+        "cs": [load_inf23_cs_records],
     }
 
     for lang, loaders in extra_test_sources.items():
@@ -311,11 +259,23 @@ if __name__ == '__main__':
             print(f"{loader.__name__}: adding {len(extra_records)} utterances to {lang}/test")
             all_lang_splits[lang]["test"].extend(extra_records)
 
+    # ─── MMS_CS: always written standalone; optionally folded into data/cs ──
+    mms_splits = load_mms_cs_records(base_dir)
+    for split in ["train", "dev", "test"]:
+        out_dir = os.path.join(mms_cs_data_dir, split)
+        write_kaldi_dir(mms_splits[split], out_dir, dry_run=dry_run, base_dir=base_dir)
+        output_dirs.append(out_dir)
+
+    if use_mms:
+        for split in ["train", "dev", "test"]:
+            print(f"load_mms_cs_records: folding {len(mms_splits[split])} utterances into cs/{split}")
+            all_lang_splits["cs"][split].extend(mms_splits[split])
+
     # Write per-language
     for lang, splits in all_lang_splits.items():
         for split in ["train", "dev", "test"]:
             out_dir = os.path.join(output_data_dir, lang, split)
-            write_kaldi_dir(splits[split], out_dir, dry_run=args.dry_run, base_dir=base_dir)
+            write_kaldi_dir(splits[split], out_dir, dry_run=dry_run, base_dir=base_dir)
             output_dirs.append(out_dir)
 
     # Trilingual
@@ -326,11 +286,54 @@ if __name__ == '__main__':
 
     for split in ["train", "dev", "test"]:
         out_dir = os.path.join(output_data_dir, "tri", split)
-        write_kaldi_dir(tri[split], out_dir, dry_run=args.dry_run, base_dir=base_dir)
+        write_kaldi_dir(tri[split], out_dir, dry_run=dry_run, base_dir=base_dir)
         output_dirs.append(out_dir)
 
-# fix + validate
-if not args.dry_run:
-    for d in output_dirs:
-        run_cmd(["./utils/fix_data_dir.sh", d])
-        run_cmd(["./utils/validate_data_dir.sh", d, "--no-feats"])
+    if not dry_run and args.fix_data:
+        for d in output_dirs:
+            run_cmd(["./utils/fix_data_dir.sh", d])
+            run_cmd(["./utils/validate_data_dir.sh", d, "--no-feats"])
+
+    return output_dirs
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main
+# ─────────────────────────────────────────────────────────────────────────────
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--dry-run", action='store_true')
+    parser.add_argument("--use_mms", action='store_true', default=False,
+                         help="If set, MMS_CS records are also folded into "
+                              "data/cs (in addition to the standalone "
+                              "mms_cs_data_dir write). Default: standalone only.")
+    parser.add_argument("--fix_data", action='store_true', default=False,
+                         help="If set, run data validation, and data dir " 
+                         "using default ESPnet scripts")
+    parser.add_argument("--stage", type=int, default=1,
+                         help="Stage to start from (default: 1).")
+    parser.add_argument("--stop_stage", type=int, default=1000,
+                         help="Last stage to run, inclusive (default: 1000, "
+                              "i.e. run through the final stage).")
+    args = parser.parse_args()
+
+    base_dir = "downloads"
+    manifest_dir = os.path.join(base_dir, "processed", "manifests", "balanced")
+
+    base_output_data_dir = "data"
+    mms_output_data_dir = os.path.join(base_output_data_dir, "mms_cs")        
+
+    if (args.stage <= 1 <= args.stop_stage) and not args.dry_run:
+        run_stage1(base_dir)
+
+    if args.stage <= 2 <= args.stop_stage:
+        run_stage2(base_dir)
+
+    if args.stage <= 3 <= args.stop_stage:
+        run_stage3(
+            base_dir=base_dir,
+            manifest_dir=manifest_dir,
+            output_data_dir=base_output_data_dir,
+            mms_cs_data_dir=mms_output_data_dir,
+            use_mms=args.use_mms,
+            dry_run=args.dry_run,
+        )
