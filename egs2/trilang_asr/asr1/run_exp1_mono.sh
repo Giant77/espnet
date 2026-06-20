@@ -1,21 +1,9 @@
 #!/usr/bin/env bash
-# run_exp1_mono.sh
-# Experiment 1 — Monolingual baselines (ID, AR, EN)
-# Wraps ESPnet2 asr.sh per language.
-# Usage:
-#   ./run_exp1_mono.sh --lang id [--stage 2] [--stop_stage 13]
-#
-# Server (RTX 2080 × 4, 2 parallel):
-#   CUDA_VISIBLE_DEVICES=0 ./run_exp1_mono.sh --lang id &
-#   CUDA_VISIBLE_DEVICES=1 ./run_exp1_mono.sh --lang ar &
-#   wait
-#   CUDA_VISIBLE_DEVICES=0 ./run_exp1_mono.sh --lang en
-
 # set -e
 # set -u
 # set -o pipefail
 
-lang=id       # id | ar | en
+lang=id		# id | ar | en
 stage=2
 stop_stage=13
 ngpu=1

@@ -1,18 +1,10 @@
 #!/usr/bin/env bash
-# run_exp2_lm.sh
-# Experiment 2 — Trilingual + XGLM-564M shallow fusion
-# Decodes the ALREADY TRAINED tri_base model with LM enabled.
-# Run AFTER run_exp1_tri.sh completes (requires exp/tri_base/).
-#
-# NOTE: LM weight (lm_weight=0.3) is a starting point;
-#       grid search on dev set recommended (0.1, 0.2, 0.3, 0.4, 0.5)
-# SERVER NOTE: Decoding only — ngpu=1 sufficient; can run 2 decodes in parallel
-
 # set -e
 # set -u
 # set -o pipefail
 
-stage=12 # start directly from decoding — ASR & LM model reused from exp1
+stage=6 # start directly to training LM
+skip_stages="10 11 " # skip ASR training; reuse from exp1
 stop_stage=13
 ngpu=1
 nj=4
@@ -26,10 +18,11 @@ if [ ! -f "${tri_model}" ]; then
     exit 1
 fi
 
-echo "=== Experiment 2: Shallow Fusion (XGLM-564M, lm_weight=${lm_weight}) ==="
+echo "=== Experiment 2: Shallow Fusion (opt-350m, lm_weight=${lm_weight}) ==="
 
 ./asr.sh \
     --stage ${stage} \
+    --skip_stages ${skip_stages} \
     --stop_stage ${stop_stage} \
     --nj ${nj} \
     --inference_nj ${inference_nj} \

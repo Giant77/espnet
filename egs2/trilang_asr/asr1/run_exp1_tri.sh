@@ -1,17 +1,4 @@
 #!/usr/bin/env bash
-# run_exp1_tri.sh
-# Experiment 1 — Trilingual base model (ID+AR+EN, NO CS data)
-# Per global resolution: CS data intentionally excluded here.
-#
-# Server (RTX 2080, single run full GPU):
-#   Conformer-S (d_model=256):  ~5-6GB → fits one 8GB card → ngpu=1
-#   Conformer-M (d_model=512):  ~7-8GB → fits one 8GB card → ngpu=1
-#   For 2x GPU DDP: --ngpu 2 (see SERVER NOTE below)
-#
-# Server parallel strategy:
-#   Run mono models first (run_exp1_mono.sh × 3 on 3 GPUs),
-#   then run this on the remaining GPU.
-
 # set -e
 # set -u
 # set -o pipefail
@@ -41,7 +28,7 @@ echo "    ngpu=${ngpu}  stage=${stage}  stop_stage=${stop_stage}"
     --max_wav_duration 30 \
     --token_type bpe \
     --nbpe ${nbpe} \
-    --use_lm true \
+    --use_lm false \
     --lm_config "conf/train_lm_opt.yaml" \
     --asr_config "conf/train_asr_conformer_tri.yaml" \
     --inference_config "conf/decode_asr.yaml" \

@@ -1,64 +1,82 @@
-# Per global resolution: CS fine-tuning ONLY, never mixed with initial train
+batch_type: numel
+batch_bins: 1000000 # server: 1000000 - 32; local: 800000 - 40; Based on LS100: 2000000 -16
+accum_grad: 32
+max_epoch: 20
+patience: 3
+init: none
+best_model_criterion:
+  - - valid
+    - acc
+    - max
+keep_nbest_models: 5
+
+# add seed for fixed results test
+seed: 777
+
 encoder: conformer
 encoder_conf:
-    output_size: 256        # NEW: 256 (vs 512 in full) for VRAM constraint
-    attention_heads: 4
-    linear_units: 2048
-    num_blocks: 12
-    dropout_rate: 0.1
-    positional_dropout_rate: 0.1
-    attention_dropout_rate: 0.1
-    input_layer: conv2d
-    normalize_before: true
-    macaron_style: true
-    rel_pos_type: latest
-    pos_enc_layer_type: rel_pos
-    selfattention_layer_type: rel_selfattn
-    activation_type: swish
-    use_cnn_module: true
-    cnn_module_kernel: 31    
+  output_size: 256
+  attention_heads: 4
+  linear_units: 1024
+  num_blocks: 18
+  dropout_rate: 0.1
+  positional_dropout_rate: 0.1
+  attention_dropout_rate: 0.1
+  input_layer: conv2d
+  normalize_before: true
+  macaron_style: true
+  rel_pos_type: latest
+  pos_enc_layer_type: rel_pos
+  selfattention_layer_type: rel_selfattn
+  activation_type: swish
+  use_cnn_module: true
+  cnn_module_kernel: 31
 
+# Add decoder LS100 based
 decoder: transformer
 decoder_conf:
-    attention_heads: 4
-    linear_units: 2048
-    num_blocks: 6
-    dropout_rate: 0.1
-    positional_dropout_rate: 0.1
-    self_attention_dropout_rate: 0.1
-    src_attention_dropout_rate: 0.1
+  attention_heads: 4
+  linear_units: 1024
+  num_blocks: 4
+  normalize_before: true
+  dropout_rate: 0.1
+  positional_dropout_rate: 0.1
+  self_attention_dropout_rate: 0.1
+  src_attention_dropout_rate: 0.15
 
-model:
-    ctc_weight: 0.3
+# test on server
+val_scheduler_criterion:
+  - valid
+  - acc
+num_workers: 2
+
+model_conf:
+  ctc_weight: 0.5
+  lsm_weight: 0.1
+  length_normalized_loss: false
 
 optim: adam
 optim_conf:
-    lr: 0.0002          # NEW: 10x lower than initial training for fine-tuning stability
+  lr: 0.00005 # lower max lr to 5e-5 for finetuning
+  weight_decay: 0.000001 # lower to 1e-6
 scheduler: warmuplr
 scheduler_conf:
-    warmup_steps: 5000  # NEW: shorter warmup for fine-tuning
+  warmup_steps: 5000 # lower warmup; if overfit test on 1k, 2k
+
+# num_att_plot: 0 # hide to visualize attn for hybrid model
 
 specaug: specaug
 specaug_conf:
-    apply_time_warp: true
-    time_warp_window: 5
-    apply_time_mask: true
-    time_mask_width_ratio_range: [0., 0.05]
-    num_time_mask: 2
-    apply_freq_mask: true
-    freq_mask_width_range: [0, 27]
-    num_freq_mask: 2
-
-max_epoch: 20           # NEW: CS fine-tuning capped at 20 epochs (TA timeline)
-patience: 3
-val_scheduler_criterion:
-    - valid
-    - acc
-best_model_criterion:
-    - - valid
-      - acc
-      - max
-
-batch_type: numel
-batch_bins: 4000000
-num_workers: 2
+  apply_time_warp: true
+  time_warp_window: 5
+  time_warp_mode: bicubic
+  apply_freq_mask: true
+  freq_mask_width_range:
+    - 0
+    - 27
+  num_freq_mask: 2
+  apply_time_mask: true
+  time_mask_width_ratio_range:
+    - 0.
+    - 0.05
+  num_time_mask: 5
