@@ -274,12 +274,19 @@ def run_stage3(base_dir: str, manifest_dir: str, output_data_dir: str,
     if use_mms:
         for split in ["train", "dev", "test"]:
             print(f"run_stage3: folding {len(all_lang_splits['cs'][split])} primary cs utterances into cs_mms/{split}")
+    
+            out_dir = os.path.join(cs_mms_data_dir, split)
             mms_splits[split].extend(all_lang_splits["cs"][split])
+
+            write_kaldi_dir(mms_splits[split], out_dir, dry_run=dry_run, base_dir=base_dir)
+            output_dirs.append(out_dir)
+
 
     # Write per-language
     for lang, splits in all_lang_splits.items():
         for split in ["train", "dev", "test"]:
             out_dir = os.path.join(output_data_dir, lang, split)
+
             write_kaldi_dir(splits[split], out_dir, dry_run=dry_run, base_dir=base_dir)
             output_dirs.append(out_dir)
 
@@ -327,7 +334,7 @@ if __name__ == '__main__':
     base_dir = "downloads"
     manifest_dir = os.path.join(base_dir, "processed", "manifests", "balanced")
 
-    base_output_data_dir = "data_test"
+    base_output_data_dir = "data"
     mms_output_data_dir = os.path.join(base_output_data_dir, "cs_mms")        
 
     if (args.stage <= 1 <= args.stop_stage) and not args.dry_run:
