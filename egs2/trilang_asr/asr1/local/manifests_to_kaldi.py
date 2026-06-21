@@ -117,7 +117,12 @@ def write_kaldi_dir(records: list, output_dir: str, dry_run: bool = False, base_
         utt_id = rec['utt_id']
         wav_path = to_wsl_path(rec['wav_path'], base_dir=base_dir)
         text = rec['text']
-        speaker = rec.get('speaker', f"spk_{utt_id[:8]}")
+        raw_speaker = rec.get('speaker', f"spk_{utt_id[:8]}")
+
+        if utt_id.startswith(raw_speaker):
+            speaker = raw_speaker
+        else:
+            speaker = utt_id
 
         wav_scp[utt_id] = wav_path
         text_map[utt_id] = text
@@ -259,28 +264,18 @@ def run_stage3(base_dir: str, manifest_dir: str, output_data_dir: str,
             print(f"{loader.__name__}: adding {len(extra_records)} utterances to {lang}/test")
             all_lang_splits[lang]["test"].extend(extra_records)
 
-    # ─── cs_mms: always written standalone; optionally folded into data/cs ──
+    # ─── cs_mms: always written and appended with data/cs; optionally not appended with data/cs ──
     mms_splits = load_cs_mms_records(base_dir)
-    # for split in ["train", "dev", "test"]:
-    #     out_dir = os.path.join(cs_mms_data_dir, split)
-    #     write_kaldi_dir(mms_splits[split], out_dir, dry_run=dry_run, base_dir=base_dir)
-    #     output_dirs.append(out_dir)
 
-    # if use_mms:
-        # mms_splits[split].extend(all_lang_splits["cs"][split])
-        # for split in ["train", "dev", "test"]:
-        #     print(f"load_cs_mms_records: folding {len(mms_splits[split])} utterances into cs/{split}")
-        #     all_lang_splits["cs"][split].extend(mms_splits[split])
     if use_mms:
         for split in ["train", "dev", "test"]:
-            print(f"run_stage3: folding {len(all_lang_splits['cs'][split])} primary cs utterances into cs_mms/{split}")
-    
-            out_dir = os.path.join(cs_mms_data_dir, split)
+            print(f"run_stage3: folding {len(all_lang_splits['cs'][split])} primary cs utterances into mms_cs/{split}")
             mms_splits[split].extend(all_lang_splits["cs"][split])
 
-            write_kaldi_dir(mms_splits[split], out_dir, dry_run=dry_run, base_dir=base_dir)
-            output_dirs.append(out_dir)
-
+    for split in ["train", "dev", "test"]:
+        out_dir = os.path.join(mms_output_data_dir, split)
+        write_kaldi_dir(mms_splits[split], out_dir, dry_run=dry_run, base_dir=base_dir)
+        output_dirs.append(out_dir)
 
     # Write per-language
     for lang, splits in all_lang_splits.items():
@@ -334,7 +329,7 @@ if __name__ == '__main__':
     base_dir = "downloads"
     manifest_dir = os.path.join(base_dir, "processed", "manifests", "balanced")
 
-    base_output_data_dir = "data"
+    base_output_data_dir = "data_test"
     mms_output_data_dir = os.path.join(base_output_data_dir, "cs_mms")        
 
     if (args.stage <= 1 <= args.stop_stage) and not args.dry_run:
