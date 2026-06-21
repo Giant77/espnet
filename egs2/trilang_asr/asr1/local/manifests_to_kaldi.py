@@ -329,7 +329,7 @@ if __name__ == '__main__':
     base_dir = "downloads"
     manifest_dir = os.path.join(base_dir, "processed", "manifests", "balanced")
 
-    base_output_data_dir = "data_test"
+    base_output_data_dir = "data"
     mms_output_data_dir = os.path.join(base_output_data_dir, "cs_mms")        
 
     if (args.stage <= 1 <= args.stop_stage) and not args.dry_run:
