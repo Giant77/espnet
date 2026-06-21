@@ -194,7 +194,7 @@ if [ "${run_decode_nolm}" = true ]; then
         --nbpe ${nbpe_cs} \
         --use_lm false \
         --inference_config "conf/decode_asr.yaml" \
-        --asr_tag "cs_ft_${approach}" \
+        --asr_tag "cs_ft_bpe${nbpe_cs}_${approach}" \
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
@@ -229,7 +229,7 @@ if [ "${run_decode_lm}" = true ]; then
             --lm_exp "${cs_lm_exp}" \
             --inference_config "conf/decode_asr.yaml" \
             --inference_args "--lm_weight ${lm_weight}" \
-            --asr_tag "cs_ft_${approach}" \
+            --asr_tag "cs_ft_bpe${nbpe_cs}_${approach}" \
             --train_set "${cs_train}" \
             --valid_set "${cs_dev}" \
             --test_sets "${test_sets_all}" \
