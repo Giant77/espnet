@@ -27,6 +27,7 @@
 # ---- phase toggles (turn off whichever you don't need to re-run) -----------
 run_data_prep=false
 run_finetune=true
+run_finetune_lm=true
 run_decode_nolm=true
 run_decode_lm=true
 
@@ -46,8 +47,9 @@ speed_perturb_factors="1.0"
 
 nbpe_cs=1000 # 500 or 1k
 
-tri_model="exp/asr_tri_base/valid.acc.ave_10best.pth"
+tri_model="exp/asr_tri_base_bpe1000_lr5e4_warm15k_epoch100/valid.acc.ave_10best.pth"
 
+# test using trilingual lm opt instead of re-tuned on CS data
 cs_lm_exp="lm_train_lm_opt_trilingual_bpe${nbpe_cs}"
 cs_train="cs_${approach}/train"
 cs_dev="cs_${approach}/dev"
@@ -107,19 +109,19 @@ if [ "${run_data_prep}" = true ]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Phase 1 — Fine-tune from tri_base (stages 10-11: ASR stats + training only)
+# Phase 1a — Fine-tune from tri_base (stages 10-11: ASR stats + training only)
 # use_lm is false here on purpose: the external LM is shallow-fused at DECODE
 # time only (Phase 2b), never jointly trained with the AM — see notebook
 # Step 2/3 for the --pretrained_model + --ignore_init_mismatch pattern.
 # -----------------------------------------------------------------------------
 if [ "${run_finetune}" = true ]; then
-    echo "    Phase 1: Fine-tuning on CS data (stages 10-11)"
+    echo "    Phase 1a: Fine-tuning on CS data (stages 10-11)"
     echo "    pretrained_model=${tri_model}"
     echo
     echo
 
     ./asr.sh \
-        --stage 11 \
+        --stage 10 \
         --stop_stage 11 \
         --nj ${nj} \
         --ngpu ${ngpu} \
@@ -136,6 +138,38 @@ if [ "${run_finetune}" = true ]; then
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
+        --speed_perturb_factors ${speed_perturb_factors} \
+        "$@"
+fi
+
+# -----------------------------------------------------------------------------
+# Phase 1b — re-finetune LM with CS (stages 6-9)
+# -----------------------------------------------------------------------------
+if [ "${run_finetune_lm}" = true ]; then
+    echo "    Phase 1b: Fine-tuning lm on CS data (stages 10-11)"
+    echo "    pretrained_model=${tri_model}"
+    echo
+    echo
+
+    ./asr.sh \
+        --stage 6 \
+        --stop_stage 9 \
+        --nj ${nj} \
+        --ngpu ${ngpu} \
+        --lang "trilingual_cs" \
+        --audio_format wav \
+        --feats_type raw \
+        --token_type bpe \
+        --nbpe ${nbpe_cs} \
+        --use_lm true \
+        --pretrained_model "${tri_model}" \
+        --ignore_init_mismatch true \
+        --asr_config "conf/finetune_asr_cs.yaml" \
+        --asr_tag "cs_ft_bpe${nbpe_cs}_${approach}" \
+        --train_set "${cs_train}" \
+        --valid_set "${cs_dev}" \
+        --test_sets "${test_sets_all}" \
+        --lm_train_text "data/${cs_train}/text" \
         --speed_perturb_factors ${speed_perturb_factors} \
         "$@"
 fi
