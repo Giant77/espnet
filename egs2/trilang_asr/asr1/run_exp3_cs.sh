@@ -49,6 +49,9 @@ nbpe_cs=1000 # 500 or 1k
 
 tri_model="exp/asr_tri_base_bpe1000_lr5e4_warm15k_epoch100/valid.acc.ave_10best.pth"
 
+asr_tag="cs_ft_bpe${nbpe_cs}_${approach}"
+
+
 # test using trilingual lm opt instead of re-tuned on CS data
 cs_lm_exp="exp/lm_train_lm_opt_trilingual_bpe${nbpe_cs}"
 cs_train="cs_${approach}/train"
@@ -134,7 +137,7 @@ if [ "${run_finetune}" = true ]; then
         --pretrained_model "${tri_model}" \
         --ignore_init_mismatch true \
         --asr_config "conf/finetune_asr_cs.yaml" \
-        --asr_tag "cs_ft_bpe${nbpe_cs}_${approach}" \
+        --asr_tag ${asr_tag} \
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
@@ -169,7 +172,7 @@ if [ "${run_finetune_lm}" = true ]; then
         --pretrained_model "${tri_model}" \
         --ignore_init_mismatch true \
         --asr_config "conf/finetune_asr_cs.yaml" \
-        --asr_tag "cs_ft_bpe${nbpe_cs}_${approach}" \
+        --asr_tag ${asr_tag} \
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
@@ -198,7 +201,7 @@ if [ "${run_decode_nolm}" = true ]; then
         --nbpe ${nbpe_cs} \
         --use_lm false \
         --inference_config "conf/decode_asr.yaml" \
-        --asr_tag "cs_ft_bpe${nbpe_cs}_${approach}" \
+        --asr_tag ${asr_tag} \
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
@@ -234,7 +237,7 @@ if [ "${run_decode_lm}" = true ]; then
             --inference_config "conf/decode_asr.yaml" \
             --inference_args "--lm_weight ${lm_weight}" \
             --inference_lm "latest.pth" \
-            --asr_tag "cs_ft_bpe${nbpe_cs}_${approach}" \
+            --asr_tag ${asr_tag} \
             --train_set "${cs_train}" \
             --valid_set "${cs_dev}" \
             --test_sets "${test_sets_all}" \
