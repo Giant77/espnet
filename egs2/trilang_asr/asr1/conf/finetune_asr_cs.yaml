@@ -1,7 +1,7 @@
 batch_type: numel
 batch_bins: 1000000 # server: 1000000 - 32; local: 800000 - 40; Based on LS100: 2000000 -16
 accum_grad: 32
-max_epoch: 20 # TODO: adjust
+max_epoch: 5
 patience: 3
 init: none
 best_model_criterion:
@@ -68,11 +68,11 @@ model_conf:
 
 optim: adam
 optim_conf:
-  lr: 0.0001 # local: 1e-4, 1e-5 ; server 5e-5, 1e-6
+  lr: 0.00002 # local: 1e-4, 1e-5 ; server 5e-5, 1e-6
   weight_decay: 0.000005 # was 0.00001(1e-5); local 5e-6 1e-6; server 1e-7
 scheduler: warmuplr
 scheduler_conf:
-  warmup_steps: 1000 # local 1k 5k; server 1k, 5k
+  warmup_steps: 500 # local 1k 5k; server 1k, 5k
 
 # num_att_plot: 0 # hide to visualize attn for hybrid model
 
