@@ -26,8 +26,8 @@
 
 # ---- phase toggles (turn off whichever you don't need to re-run) -----------
 run_data_prep=false
-run_finetune=true
-run_finetune_lm=true
+run_finetune=false
+run_finetune_lm=false
 run_decode_nolm=true
 run_decode_lm=true
 
@@ -50,7 +50,7 @@ nbpe_cs=1000 # 500 or 1k
 tri_model="exp/asr_tri_base_bpe1000_lr5e4_warm15k_epoch100/valid.acc.ave_10best.pth"
 
 # test using trilingual lm opt instead of re-tuned on CS data
-cs_lm_exp="lm_train_lm_opt_trilingual_bpe${nbpe_cs}"
+cs_lm_exp="exp/lm_train_lm_opt_trilingual_bpe${nbpe_cs}"
 cs_train="cs_${approach}/train"
 cs_dev="cs_${approach}/dev"
 cs_test="cs_${approach}/test"
@@ -151,6 +151,10 @@ if [ "${run_finetune_lm}" = true ]; then
     echo
     echo
 
+    # train lm on both tri and cs data
+    cat "data/${cs_train}/text" > "data/${cs_train}/../text"
+    cat "data/tri/train/text" >> "data/${cs_train}/../text"
+
     ./asr.sh \
         --stage 6 \
         --stop_stage 9 \
@@ -169,7 +173,7 @@ if [ "${run_finetune_lm}" = true ]; then
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
-        --lm_train_text "data/${cs_train}/text" \
+        --lm_train_text "data/${cs_train}/../text" \
         --speed_perturb_factors ${speed_perturb_factors} \
         "$@"
 fi
@@ -229,6 +233,7 @@ if [ "${run_decode_lm}" = true ]; then
             --lm_exp "${cs_lm_exp}" \
             --inference_config "conf/decode_asr.yaml" \
             --inference_args "--lm_weight ${lm_weight}" \
+            --inference_lm "latest.pth" \
             --asr_tag "cs_ft_bpe${nbpe_cs}_${approach}" \
             --train_set "${cs_train}" \
             --valid_set "${cs_dev}" \

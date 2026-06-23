@@ -10,7 +10,7 @@ best_model_criterion:
   - - valid
     - acc # voxtlm: loss
     - max # voxtlm: min
-keep_nbest_models: 10
+keep_nbest_models: 5
 
 lm: transformer_opt
 lm_conf:
