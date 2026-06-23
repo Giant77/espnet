@@ -1,69 +1,61 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-PERCENT=10
+for split in train dev; do
+    SRC_ID="data/id/$split"
+    SRC_EN="data/en/$split"
+    SRC_AR="data/ar/$split"
+    SRC_CS="data/cs/$split"
+    DEST="data/cs_tri/$split"
 
-SRC_ID="data/id/train"
-SRC_EN="data/en/train"
-SRC_AR="data/ar/train"
-SRC_CS="data/cs/train"
-DEST="data/cs_tri/train"
+    mkdir -p "$DEST"
 
-mkdir -p "$DEST"
+    extract_3_4_3() {
+        local file="$1"
+        local n mid start
 
-tmpdir=$(mktemp -d)
-trap 'rm -rf "$tmpdir"' EXIT
+        n=$(wc -l < "$file")
 
-make_index() {
-    local dir="$1"
-    local outfile="$2"
+        (( n == 0 )) && return
 
-    local ref
-    ref=$(find "$dir" -type f | head -n1)
+        # Small files: just keep everything.
+        if (( n <= 10 )); then
+            cat "$file"
+            return
+        fi
 
-    [ -n "$ref" ] || {
-        echo "No files in $dir"
-        exit 1
+        mid=$((n / 2))
+        start=$((mid - 1))
+
+        {
+            seq 1 3
+            seq "$start" "$((start + 3))"
+            seq "$((n - 2))" "$n"
+        } | sort -nu | while read -r i; do
+            sed -n "${i}p" "$file"
+        done
     }
 
-    local total take
-    total=$(wc -l < "$ref")
-    take=$((total * PERCENT / 100))
+    for f in "$SRC_CS"/*; do
+        [ -f "$f" ] || continue
 
-    shuf -i 1-"$total" -n "$take" | sort -n > "$outfile"
-}
+        name=$(basename "$f")
+        out="$DEST/$name"
 
-# One random index per folder
-make_index "$SRC_ID" "$tmpdir/id.idx"
-make_index "$SRC_EN" "$tmpdir/en.idx"
-make_index "$SRC_AR" "$tmpdir/ar.idx"
+        : > "$out"
 
-for f in "$SRC_CS"/*; do
-    name=$(basename "$f")
-    out="$DEST/$name"
+        [ -f "$SRC_ID/$name" ] && \
+            extract_3_4_3 "$SRC_ID/$name" >> "$out"
 
-    : > "$out"
+        [ -f "$SRC_EN/$name" ] && \
+            extract_3_4_3 "$SRC_EN/$name" >> "$out"
 
-    # Random lines from id
-    if [ -f "$SRC_ID/$name" ]; then
-        awk 'NR==FNR {a[$1]; next} FNR in a' \
-            "$tmpdir/id.idx" "$SRC_ID/$name" >> "$out"
-    fi
+        [ -f "$SRC_AR/$name" ] && \
+            extract_3_4_3 "$SRC_AR/$name" >> "$out"
 
-    # Random lines from en
-    if [ -f "$SRC_EN/$name" ]; then
-        awk 'NR==FNR {a[$1]; next} FNR in a' \
-            "$tmpdir/en.idx" "$SRC_EN/$name" >> "$out"
-    fi
+        # Append the full CS file.
+        cat "$SRC_CS/$name" >> "$out"
+    done
 
-    # Random lines from ar
-    if [ -f "$SRC_AR/$name" ]; then
-        awk 'NR==FNR {a[$1]; next} FNR in a' \
-            "$tmpdir/ar.idx" "$SRC_AR/$name" >> "$out"
-    fi
-
-    # Entire cs file
-    cat "$SRC_CS/$name" >> "$out"
+    echo "Done: $split"
 done
-
-echo "Done."
