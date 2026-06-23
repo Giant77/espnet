@@ -25,15 +25,15 @@
 # =============================================================================
 
 # ---- phase toggles (turn off whichever you don't need to re-run) -----------
-run_data_prep=false
-run_finetune=false
+run_data_prep=true
+run_finetune=true
 run_finetune_lm=false
 run_decode_nolm=true
 run_decode_lm=true
 
 # ---- run controls ------------------------------------------------------------
 # approach="${1:?Usage: run_exp3.sh <A|B> [extra asr.sh args...]   (A=TTS synthetic CS, B=audio concat CS)}"
-approach=""
+approach="tri"
 shift
 # TODO: changes approachs, current plans:
 # approach pure (data/cs/...)
@@ -74,9 +74,6 @@ fi
 
 test_sets_all="${cs_test} id/test ar/test en/test"
 
-# echo $cs_train
-# echo $cs_dev
-# echo $test_sets_all
 
 echo "=== Experiment 3: CS Fine-tuning (Approach ${approach}) ==="
 

@@ -13,6 +13,17 @@ keep_nbest_models: 5
 # add seed for fixed results test
 seed: 777
 
+freeze_param:
+- encoder.encoders.0
+- encoder.encoders.1
+- encoder.encoders.2
+- encoder.encoders.3
+- encoder.encoders.4
+- encoder.encoders.5
+- encoder.encoders.6
+- encoder.encoders.7
+- encoder.encoders.8
+
 encoder: conformer
 encoder_conf:
   output_size: 256
