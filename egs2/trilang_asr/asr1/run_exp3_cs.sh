@@ -25,7 +25,7 @@
 # =============================================================================
 
 # ---- phase toggles (turn off whichever you don't need to re-run) -----------
-run_data_prep=false
+run_data_prep=true
 run_finetune=true
 run_finetune_lm=false
 run_decode_nolm=true
@@ -58,6 +58,20 @@ cs_train="cs_${approach}/train"
 cs_dev="cs_${approach}/dev"
 cs_test="cs_${approach}/test"
 
+# retrain cs with all tri
+
+echo "test: start combine"
+
+utils/combine_data.sh "data/cs_tri/train" \
+    "data/cs/train" \
+    "data/tri/train"
+utils/combine_data.sh "data/cs_tri/dev" \
+"data/cs/dev" \
+"data/tri/dev"
+utils/combine_data.sh "data/cs_tri/test" \
+"data/cs/test" \
+"data/tri/test"
+
 if [ ! -f "${tri_model}" ]; then
     echo "ERROR: Trilingual base model not found: ${tri_model}"
     echo "Run run_exp1_tri.sh first."
@@ -72,23 +86,14 @@ if [ ! -d "data/${cs_train}" ]; then
     cs_test="cs/test"
 fi
 
-for lang in id ar en; do
-    n=$(wc -l < data/${lang}/train/utt2spk)
-    sample_n=$(echo "$n * 10 / 100" | bc)
-    utils/subset_data_dir.sh data/${lang}/train ${sample_n} data/${lang}/train_replay10pct
-
-    echo ${lang} is sampled
-done
-
-utils/combine_data.sh data/cs_replay_train \
-    data/cs/train \
-    data/id/train_replay10pct \
-    data/ar/train_replay10pct \
-    data/en/train_replay10pct
-
-
 test_sets_all="cs/test id/test ar/test en/test"
 
+echo "${cs_train}"
+echo "${cs_dev}"
+echo "${cs_test}"
+echo "${test_sets_all}"
+
+exit 
 
 echo "=== Experiment 3: CS Fine-tuning (Approach ${approach}) ==="
 
@@ -148,7 +153,7 @@ if [ "${run_finetune}" = true ]; then
         --use_lm false \
         --pretrained_model "${tri_model}" \
         --ignore_init_mismatch true \
-        --asr_config "conf/finetune_asr_cs.yaml" \
+        --asr_config "conf/train_asr_conformer_tri.yaml" \
         --asr_tag ${asr_tag} \
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
@@ -183,7 +188,7 @@ if [ "${run_finetune_lm}" = true ]; then
         --use_lm true \
         --pretrained_model "${tri_model}" \
         --ignore_init_mismatch true \
-        --asr_config "conf/finetune_asr_cs.yaml" \
+        --asr_config "conf/train_asr_conformer_tri.yaml" \
         --asr_tag ${asr_tag} \
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
