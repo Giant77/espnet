@@ -113,7 +113,7 @@ if [ "${run_data_prep}" = true ]; then
         --token_type bpe \
         --nbpe ${nbpe_cs} \
         --speed_perturb_factors ${speed_perturb_factors} \
-        --train_set "data/cs_replay_train" \
+        --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
         --bpe_train_text "data/cs/train/text" \
