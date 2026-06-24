@@ -25,7 +25,7 @@
 # =============================================================================
 
 # ---- phase toggles (turn off whichever you don't need to re-run) -----------
-run_data_prep=true
+run_data_prep=false
 run_finetune=true
 run_finetune_lm=false
 run_decode_nolm=true
@@ -72,7 +72,22 @@ if [ ! -d "data/${cs_train}" ]; then
     cs_test="cs/test"
 fi
 
-test_sets_all="${cs_test} id/test ar/test en/test"
+for lang in id ar en; do
+    n=$(wc -l < data/${lang}/train/utt2spk)
+    sample_n=$(echo "$n * 10 / 100" | bc)
+    utils/subset_data_dir.sh data/${lang}/train ${sample_n} data/${lang}/train_replay10pct
+
+    echo ${lang} is sampled
+done
+
+utils/combine_data.sh data/cs_replay_train \
+    data/cs/train \
+    data/id/train_replay10pct \
+    data/ar/train_replay10pct \
+    data/en/train_replay10pct
+
+
+test_sets_all="cs/test id/test ar/test en/test"
 
 
 echo "=== Experiment 3: CS Fine-tuning (Approach ${approach}) ==="
@@ -98,7 +113,7 @@ if [ "${run_data_prep}" = true ]; then
         --token_type bpe \
         --nbpe ${nbpe_cs} \
         --speed_perturb_factors ${speed_perturb_factors} \
-        --train_set "${cs_train}" \
+        --train_set "data/cs_replay_train" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
         --bpe_train_text "data/cs/train/text" \
@@ -125,7 +140,7 @@ if [ "${run_finetune}" = true ]; then
         --stop_stage 11 \
         --nj ${nj} \
         --ngpu ${ngpu} \
-        --lang "trilingual_cs" \
+        --lang "trilingual" \
         --audio_format wav \
         --feats_type raw \
         --token_type bpe \
