@@ -90,8 +90,6 @@ test_sets_all="cs/test id/test ar/test en/test"
 # echo "${cs_test}"
 # echo "${test_sets_all}"
 
-exit 
-
 echo "=== Experiment 3: CS Fine-tuning (Approach ${approach}) ==="
 
 # -----------------------------------------------------------------------------
