@@ -59,9 +59,6 @@ cs_dev="cs_${approach}/dev"
 cs_test="cs_${approach}/test"
 
 # retrain cs with all tri
-
-echo "test: start combine"
-
 utils/combine_data.sh "data/cs_tri/train" \
     "data/cs/train" \
     "data/tri/train"
@@ -88,10 +85,10 @@ fi
 
 test_sets_all="cs/test id/test ar/test en/test"
 
-echo "${cs_train}"
-echo "${cs_dev}"
-echo "${cs_test}"
-echo "${test_sets_all}"
+# echo "${cs_train}"
+# echo "${cs_dev}"
+# echo "${cs_test}"
+# echo "${test_sets_all}"
 
 exit 
 
