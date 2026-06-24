@@ -2,9 +2,10 @@ import os
 import re
 import csv
 import json
-import string
+import random
 import unicodedata
 import subprocess
+from collections import defaultdict
 from pyarabic import araby
 from tqdm import tqdm
 
@@ -23,9 +24,6 @@ CONFIG = {
 def convert_to_wav(input_path: str, output_path: str) -> bool:
     """
     Convert any audio to 16kHz mono WAV using ffmpeg.
-
-    Returns:
-        bool: True if conversion succeeds, False otherwise.
     """
     cmd = [
         "ffmpeg", "-y", "-i", input_path,
@@ -51,6 +49,30 @@ def save_manifest(records, path: str) -> None:
 def load_manifest_json(path: str):
     with open(path, encoding='utf-8') as f:
         return json.load(f)
+
+def split_records(records: list, train_ratio=0.8, dev_ratio=0.1, seed=777):
+    random.seed(seed)
+
+    spk_to_utts = defaultdict(list)
+    for rec in records:
+        spk_to_utts[rec.get('speaker', 'spk_unknown')].append(rec)
+
+    speakers = sorted(spk_to_utts.keys())
+    random.shuffle(speakers)
+
+    n = len(speakers)
+    n_train = int(n * train_ratio)
+    n_dev = int(n * dev_ratio)
+
+    train_spks = set(speakers[:n_train])
+    dev_spks = set(speakers[n_train:n_train + n_dev])
+    test_spks = set(speakers[n_train + n_dev:])
+
+    train = [r for r in records if r.get('speaker') in train_spks]
+    dev = [r for r in records if r.get('speaker') in dev_spks]
+    test = [r for r in records if r.get('speaker') in test_spks]
+
+    return train, dev, test
 
 # ─────────────────────────────────────────────────────────────────────────────
 # text normalization (stage 2)
@@ -114,7 +136,7 @@ def normalize_transcript(text: str) -> str:
 # INF23_CS helpers
 # ─────────────────────────────────────────────────────────────────────────────
 def _load_inf23_cs_transcript(tsv_path: str) -> dict:
-    """Headerless TSV: <id>\\t<transcript>. Returns {str(int(id)): text}."""
+    """Headerless TSV: <id>\t<transcript>. Returns {str(int(id)): text}."""
     transcripts = {}
     with open(tsv_path, encoding='utf-8', newline='') as f:
         reader = csv.reader(f, delimiter='\t')
@@ -234,7 +256,7 @@ _MMS_SPLIT_FILES = {
 }
 
 def _stage1_cs_mms_split(pair_dir: str, pair: str, split: str, csv_name: str,
-                          out_wav_dir: str) -> list:
+                         out_wav_dir: str) -> list:
     """
     Converts audio for one split CSV (train.csv / val.csv / test.csv) of a
     single lang-pair dir under cs_mms/<pair>/.
@@ -316,11 +338,67 @@ def stage1_cs_mms(base_dir: str) -> list:
     print(f"stage1_cs_mms: wrote {len(records)} records -> {manifest_path}")
     return records
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CS_EDGE — stage 1 (audio)
+# ─────────────────────────────────────────────────────────────────────────────
+def stage1_cs_edge(base_dir: str) -> list:
+    """
+    Walks cs_edge/manifest_*.jsonl files.
+    Converts audio to 16kHz mono wav under downloads/cs_edge/processed/<cs_type>/wavs/<utt_id>.wav
+    Persists stage1 record list to downloads/cs_edge/processed/manifests/stage1.json
+    """
+    source_root = os.path.join(base_dir, "cs_edge")
+    out_root = os.path.join(source_root, "processed")
+    manifest_path = os.path.join(out_root, "manifests", "stage1.json")
+
+    if not os.path.isdir(source_root):
+        print(f"WARN: Missing {source_root}")
+        save_manifest([], manifest_path)
+        return []
+
+    records = []
+    for fn in sorted(os.listdir(source_root)):
+        if fn.startswith("manifest_") and fn.endswith(".jsonl"):
+            with open(os.path.join(source_root, fn), 'r', encoding='utf-8') as f:
+                for line in tqdm(f, desc=f"Stage 1: cs_edge {fn}"):
+                    line = line.strip()
+                    if not line: continue
+                    rec = json.loads(line)
+                    
+                    audio_path = rec.get("audio")
+                    if not audio_path or not os.path.exists(audio_path):
+                        print(f"WARN: Missing audio {audio_path}")
+                        continue
+                    
+                    stem = os.path.splitext(os.path.basename(audio_path))[0]
+                    utt_id = f"EDGE_{stem}"
+                    cs_type = rec.get("cs_type", "unknown")
+                    
+                    out_wav_dir = os.path.join(out_root, cs_type, "wavs")
+                    os.makedirs(out_wav_dir, exist_ok=True)
+                    out_wav = os.path.join(out_wav_dir, f"{utt_id}.wav")
+
+                    if convert_to_wav(audio_path, out_wav):
+                        records.append({
+                            "utt_id": utt_id,
+                            "wav_path": out_wav.replace('\\', '/'),
+                            "raw_text": rec.get("text", ""),
+                            "speaker": utt_id,
+                            "cs_type": cs_type,
+                            "duration": rec.get("duration", 0.0)
+                        })
+
+    save_manifest(records, manifest_path)
+    print(f"stage1_cs_edge: wrote {len(records)} records -> {manifest_path}")
+    return records
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # stage 2 (transcript normalization) — dataset-agnostic
 # ─────────────────────────────────────────────────────────────────────────────
 def stage2_normalize_dataset(stage1_manifest_path: str, out_manifest_path: str,
-                              desc: str = "Stage 2: normalizing transcripts") -> list:
+                             desc: str = "Stage 2: normalizing transcripts") -> list:
     """
     Reads a stage1 manifest (utt_id, wav_path, raw_text, speaker, ...),
     applies normalize_transcript() to raw_text, and writes the final
@@ -372,6 +450,14 @@ def stage2_cs_mms(base_dir: str) -> list:
         desc="Stage 2: CS_MMS transcripts",
     )
 
+def stage2_cs_edge(base_dir: str) -> list:
+    out_root = os.path.join(base_dir, "cs_edge", "processed", "manifests")
+    return stage2_normalize_dataset(
+        stage1_manifest_path=os.path.join(out_root, "stage1.json"),
+        out_manifest_path=os.path.join(out_root, "records.json"),
+        desc="Stage 2: cs_edge transcripts",
+    )
+
 # ─────────────────────────────────────────────────────────────────────────────
 # stage 2 output loaders — used by stage 3 / manifests_to_kaldi.py
 # ─────────────────────────────────────────────────────────────────────────────
@@ -399,3 +485,17 @@ def load_cs_mms_records(base_dir: str) -> dict:
         split = rec.get("split", "train")
         splits.setdefault(split, []).append(rec)
     return splits
+
+def load_cs_edge_records(base_dir: str) -> dict:
+    """
+    Loads stage2 output for CS_EDGE, runs split_records on the flat list, 
+    and returns {"train": [...], "dev": [...], "test": [...]}.
+    """
+    path = os.path.join(base_dir, "cs_edge", "processed", "manifests", "records.json")
+    if not os.path.exists(path):
+        print(f"WARN: Missing {path} (run stage 1+2 first)")
+        return {"train": [], "dev": [], "test": []}
+        
+    records = load_manifest_json(path)
+    train_recs, dev_recs, test_recs = split_records(records)
+    return {"train": train_recs, "dev": dev_recs, "test": test_recs}

@@ -2,8 +2,8 @@
 manifests_to_kaldi.py
 
 Staged pipeline:
-  Stage 1 — preprocess INF23_CS and cs_mms audio (convert/resample to wav)
-  Stage 2 — preprocess INF23_CS and cs_mms transcripts (normalize text)
+  Stage 1 — preprocess INF23_CS, cs_edge, and cs_mms audio (convert/resample to wav)
+  Stage 2 — preprocess INF23_CS, cs_edge, and cs_mms transcripts (normalize text)
   Stage 3 — convert manifests (existing lang_groups + stage2 CS outputs) to
             Kaldi data dirs
 
@@ -17,13 +17,18 @@ import os
 import argparse
 import subprocess
 from collections import defaultdict
+
 from preprocess_cs import (
     stage1_inf23_cs,
     stage1_cs_mms,
+    stage1_cs_edge,
     stage2_inf23_cs,
     stage2_cs_mms,
+    stage2_cs_edge,
     load_inf23_cs_records,
     load_cs_mms_records,
+    load_cs_edge_records,
+    split_records
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -31,10 +36,8 @@ from preprocess_cs import (
 # ─────────────────────────────────────────────────────────────────────────────
 def run_cmd(cmd):
     print("──"*25)
-
     print("Running:", " ".join(cmd))
     subprocess.run(cmd, check=True)
-
     print()
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -153,58 +156,36 @@ def write_kaldi_dir(records: list, output_dir: str, dry_run: bool = False, base_
     print(f"Written {len(sorted_utts)} utterances → {output_dir}")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Split
-# ─────────────────────────────────────────────────────────────────────────────
-def split_records(records: list, train_ratio=0.8, dev_ratio=0.1, seed=777):
-    import random
-    random.seed(seed)
-
-    spk_to_utts = defaultdict(list)
-    for rec in records:
-        spk_to_utts[rec.get('speaker', 'spk_unknown')].append(rec)
-
-    speakers = sorted(spk_to_utts.keys())
-    random.shuffle(speakers)
-
-    n = len(speakers)
-    n_train = int(n * train_ratio)
-    n_dev = int(n * dev_ratio)
-
-    train_spks = set(speakers[:n_train])
-    dev_spks = set(speakers[n_train:n_train + n_dev])
-    test_spks = set(speakers[n_train + n_dev:])
-
-    train = [r for r in records if r.get('speaker') in train_spks]
-    dev = [r for r in records if r.get('speaker') in dev_spks]
-    test = [r for r in records if r.get('speaker') in test_spks]
-
-    return train, dev, test
-
-# ─────────────────────────────────────────────────────────────────────────────
 # Stage 1 — audio preprocessing
 # ─────────────────────────────────────────────────────────────────────────────
-def run_stage1(base_dir: str) -> None:
+def run_stage1(base_dir: str, cs_sources: set) -> None:
     print("=" * 70)
-    print("STAGE 1: preprocessing INF23_CS and cs_mms audio")
+    print("STAGE 1: preprocessing audio (INF23_CS + optional sources)")
     print("=" * 70)
     stage1_inf23_cs(base_dir)
-    stage1_cs_mms(base_dir)
+    if "edge" in cs_sources:
+        stage1_cs_edge(base_dir)
+    if "mms" in cs_sources:
+        stage1_cs_mms(base_dir)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 2 — transcript preprocessing
 # ─────────────────────────────────────────────────────────────────────────────
-def run_stage2(base_dir: str) -> None:
+def run_stage2(base_dir: str, cs_sources: set) -> None:
     print("=" * 70)
-    print("STAGE 2: preprocessing INF23_CS and cs_mms transcripts")
+    print("STAGE 2: preprocessing transcripts (INF23_CS + optional sources)")
     print("=" * 70)
     stage2_inf23_cs(base_dir)
-    stage2_cs_mms(base_dir)
+    if "edge" in cs_sources:
+        stage2_cs_edge(base_dir)
+    if "mms" in cs_sources:
+        stage2_cs_mms(base_dir)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 3 — manifests to kaldi
 # ─────────────────────────────────────────────────────────────────────────────
 def run_stage3(base_dir: str, manifest_dir: str, output_data_dir: str,
-               cs_mms_data_dir: str, use_mms: bool, dry_run: bool) -> list:
+               cs_sources: set, dry_run: bool) -> list:
     print("=" * 70)
     print("STAGE 3: converting manifests to Kaldi data dirs")
     print("=" * 70)
@@ -248,10 +229,7 @@ def run_stage3(base_dir: str, manifest_dir: str, output_data_dir: str,
 
         all_lang_splits[lang] = lang_splits
 
-    # ─── Extra test-only sources ───────────────────────────────────────────
-    # These are appended directly to a split's "test" list and never pass
-    # through split_records. Reads stage2 output (records.json); run
-    # stage 1+2 first.
+    # ─── Extra test-only sources (Always-on) ───────────────────────────────
     extra_test_sources = {
         "cs": [load_inf23_cs_records],
     }
@@ -264,17 +242,31 @@ def run_stage3(base_dir: str, manifest_dir: str, output_data_dir: str,
             print(f"{loader.__name__}: adding {len(extra_records)} utterances to {lang}/test")
             all_lang_splits[lang]["test"].extend(extra_records)
 
-    # ─── cs_mms: always written and appended with data/cs; optionally not appended with data/cs ──
-    mms_splits = load_cs_mms_records(base_dir)
+    # ─── Process Optional CS Sources dynamically ────────────────────────────
+    active_sources = sorted([s for s in cs_sources if s != "none"])
+    combo_dir_name = "cs_" + "_".join(active_sources) if active_sources else "cs"
+    combined_cs_data_dir = os.path.join(output_data_dir, combo_dir_name)
+    
+    combined_splits = {"train": [], "dev": [], "test": []}
 
-    if use_mms:
-        for split in ["train", "dev", "test"]:
-            print(f"run_stage3: folding {len(all_lang_splits['cs'][split])} primary cs utterances into mms_cs/{split}")
-            mms_splits[split].extend(all_lang_splits["cs"][split])
+    if "edge" in cs_sources:
+        edge_splits = load_cs_edge_records(base_dir)
+        for s in ["train", "dev", "test"]: 
+            combined_splits[s].extend(edge_splits[s])
+            
+    if "mms" in cs_sources:
+        mms_splits = load_cs_mms_records(base_dir)
+        for s in ["train", "dev", "test"]: 
+            combined_splits[s].extend(mms_splits[s])
+
+    # Fold primary cs records into the combined splits
+    for split in ["train", "dev", "test"]:
+        print(f"run_stage3: folding {len(all_lang_splits['cs'][split])} primary cs utterances into {combo_dir_name}/{split}")
+        combined_splits[split].extend(all_lang_splits["cs"][split])
 
     for split in ["train", "dev", "test"]:
-        out_dir = os.path.join(mms_output_data_dir, split)
-        write_kaldi_dir(mms_splits[split], out_dir, dry_run=dry_run, base_dir=base_dir)
+        out_dir = os.path.join(combined_cs_data_dir, split)
+        write_kaldi_dir(combined_splits[split], out_dir, dry_run=dry_run, base_dir=base_dir)
         output_dirs.append(out_dir)
 
     # Write per-language
@@ -309,41 +301,35 @@ def run_stage3(base_dir: str, manifest_dir: str, output_data_dir: str,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--dry-run", action='store_true')
-    parser.add_argument("--use_mms", action='store_true', default=True,
-                         help="If set (default: True), primary cs records "
-                              "are folded into mms_output_data_dir (in addition "
-                              "to data/cs being written normally). Pass "
-                              "--no-use_mms to write cs_mms standalone only.")
-    parser.add_argument("--no_use_mms", dest="use_mms", action='store_false',
-                         help="Disable folding primary cs records into mms_output_data_dir.")
+    parser.add_argument("--cs_sources", type=str, default="edge",
+                        help="Space-delimited CS sources to include. Options: edge mms none.")
     parser.add_argument("--fix_data", action='store_true', default=False,
-                         help="If set, run data validation, and data dir " 
-                         "using default ESPnet scripts")
+                        help="If set, run data validation, and data dir " 
+                        "using default ESPnet scripts")
     parser.add_argument("--stage", type=int, default=1,
-                         help="Stage to start from (default: 1).")
+                        help="Stage to start from (default: 1).")
     parser.add_argument("--stop_stage", type=int, default=1000,
-                         help="Last stage to run, inclusive (default: 1000, "
-                              "i.e. run through the final stage).")
+                        help="Last stage to run, inclusive (default: 1000, "
+                             "i.e. run through the final stage).")
     args = parser.parse_args()
+
+    cs_sources = set(args.cs_sources.lower().split())
 
     base_dir = "downloads"
     manifest_dir = os.path.join(base_dir, "processed", "manifests", "balanced")
-
     base_output_data_dir = "data"
-    mms_output_data_dir = os.path.join(base_output_data_dir, "cs_mms")        
 
     if (args.stage <= 1 <= args.stop_stage) and not args.dry_run:
-        run_stage1(base_dir)
+        run_stage1(base_dir, cs_sources)
 
     if args.stage <= 2 <= args.stop_stage:
-        run_stage2(base_dir)
+        run_stage2(base_dir, cs_sources)
 
     if args.stage <= 3 <= args.stop_stage:
         run_stage3(
             base_dir=base_dir,
             manifest_dir=manifest_dir,
             output_data_dir=base_output_data_dir,
-            cs_mms_data_dir=mms_output_data_dir,
-            use_mms=args.use_mms,
+            cs_sources=cs_sources,
             dry_run=args.dry_run,
         )
