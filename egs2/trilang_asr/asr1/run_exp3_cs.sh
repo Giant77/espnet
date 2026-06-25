@@ -3,27 +3,6 @@
 # set -u
 # set -o pipefail
 
-# =============================================================================
-# Experiment 3: Code-Switching (ID/AR/EN) fine-tuning from the trilingual base
-#
-# Transfer-learning mechanics here (--pretrained_model + --ignore_init_mismatch)
-# follow the official ESPnet2 walkthrough:
-#   https://github.com/espnet/notebook/blob/master/ESPnet2/Demo/ASR/asr_transfer_learning_demo.ipynb
-# (mirrored at https://github.com/espnet/espnet/blob/master/egs2/mini_an4/asr1/transfer_learning.md)
-#
-# That notebook's Step 3/4 is explicit about exactly our scenario: if the
-# target task has a DIFFERENT vocabulary than the pretrained model, the
-# projection layer will mismatch in shape and crash a normal load. Quoting
-# the notebook: "Language Y may have a vocabulary different from language X
-# ... the last layer (projection to vocabulary space) ... needs to be
-# initialized from scratch and may be different in shape ... For that reason,
-# you should use the --ignore_init_mismatch true option." That is exactly
-# our case: tri_base was trained on 1000 BPE, this CS run trains and uses a
-# FRESH 500 BPE, so the decoder embed/output layer and ctc.ctc_lo will not
-# match shape and must fall back to random init while everything else
-# (encoder, decoder self/cross-attention) transfers from tri_base.
-# =============================================================================
-
 # ---- phase toggles (turn off whichever you don't need to re-run) -----------
 run_data_prep=true
 run_finetune=true
@@ -31,13 +10,7 @@ run_finetune_lm=false
 run_decode_nolm=true
 run_decode_lm=true
 
-# ---- run controls ------------------------------------------------------------
-# approach="${1:?Usage: run_exp3.sh <A|B> [extra asr.sh args...]   (A=TTS synthetic CS, B=audio concat CS)}"
 approach="tri"
-shift
-# TODO: changes approachs, current plans:
-# approach pure (data/cs/...)
-# approach mms  (data/cs_mms/...)
 
 ngpu=1
 nj=4
@@ -49,7 +22,7 @@ nbpe_cs=1000 # 500 or 1k
 
 tri_model="exp/asr_tri_base_bpe1000_lr5e4_warm15k_epoch100/valid.acc.ave_10best.pth"
 
-asr_tag="cs_ft_bpe${nbpe_cs}_${approach}"
+asr_tag="tri_cs_ft_bpe${nbpe_cs}_${approach}"
 
 
 # test using trilingual lm opt instead of re-tuned on CS data
@@ -58,16 +31,22 @@ cs_train="cs_${approach}/train"
 cs_dev="cs_${approach}/dev"
 cs_test="cs_${approach}/test"
 
-# retrain cs with all tri
-utils/combine_data.sh "data/cs_tri/train" \
-    "data/cs/train" \
-    "data/tri/train"
-utils/combine_data.sh "data/cs_tri/dev" \
-"data/cs/dev" \
-"data/tri/dev"
-utils/combine_data.sh "data/cs_tri/test" \
-"data/cs/test" \
-"data/tri/test"
+
+if [ "${run_data_prep}" = true ]; then
+    # retrain cs with all tri+cs+cs_edge data
+    utils/combine_data.sh "data/cs_tri/train" \
+        "data/cs_edge/train" \
+        "data/cs/train" \
+        "data/tri/train"
+    utils/combine_data.sh "data/cs_tri/dev" \
+        "data/cs_edge/dev" \
+        "data/cs/dev" \
+        "data/tri/dev"
+    utils/combine_data.sh "data/cs_tri/test" \
+        "data/cs_edge/test" \
+        "data/cs/test" \
+        "data/tri/test"
+fi
 
 if [ ! -f "${tri_model}" ]; then
     echo "ERROR: Trilingual base model not found: ${tri_model}"
@@ -84,11 +63,6 @@ if [ ! -d "data/${cs_train}" ]; then
 fi
 
 test_sets_all="cs/test id/test ar/test en/test"
-
-# echo "${cs_train}"
-# echo "${cs_dev}"
-# echo "${cs_test}"
-# echo "${test_sets_all}"
 
 echo "=== Experiment 3: CS Fine-tuning (Approach ${approach}) ==="
 
@@ -135,6 +109,8 @@ if [ "${run_finetune}" = true ]; then
     echo
     echo
 
+    # re-add the following cmd args for finetuning prevs model
+    # --pretrained_model "${tri_model}" \
     ./asr.sh \
         --stage 10 \
         --stop_stage 11 \
@@ -146,7 +122,6 @@ if [ "${run_finetune}" = true ]; then
         --token_type bpe \
         --nbpe ${nbpe_cs} \
         --use_lm false \
-        --pretrained_model "${tri_model}" \
         --ignore_init_mismatch true \
         --asr_config "conf/train_asr_conformer_tri.yaml" \
         --asr_tag ${asr_tag} \
@@ -170,6 +145,7 @@ if [ "${run_finetune_lm}" = true ]; then
     cat "data/${cs_train}/text" > "data/${cs_train}/../text"
     cat "data/tri/train/text" >> "data/${cs_train}/../text"
 
+    # adjust lm_conf if lm are being finetuned 
     ./asr.sh \
         --stage 6 \
         --stop_stage 9 \
@@ -181,7 +157,7 @@ if [ "${run_finetune_lm}" = true ]; then
         --token_type bpe \
         --nbpe ${nbpe_cs} \
         --use_lm true \
-        --pretrained_model "${tri_model}" \
+        --lm_conf "conf/train_lm_opt.yaml" \
         --ignore_init_mismatch true \
         --asr_config "conf/train_asr_conformer_tri.yaml" \
         --asr_tag ${asr_tag} \
