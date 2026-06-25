@@ -5,6 +5,7 @@
 
 # ---- phase toggles (turn off whichever you don't need to re-run) -----------
 run_data_prep=true
+# run_data_prep=false
 run_finetune=true
 run_finetune_lm=false
 run_decode_nolm=true
@@ -22,8 +23,8 @@ nbpe_cs=1000 # 500 or 1k
 
 tri_model="exp/asr_tri_base_bpe1000_lr5e4_warm15k_epoch100/valid.acc.ave_10best.pth"
 
-asr_tag="tri_cs_ft_bpe${nbpe_cs}_${approach}"
-
+asr_tag="tri_cs_ft_bpe${nbpe_cs}_epoch10"
+# asr_tag="tri_cs_bpe${nbpe_cs}_epoch60"
 
 # test using trilingual lm opt instead of re-tuned on CS data
 cs_lm_exp="exp/lm_train_lm_opt_trilingual_bpe${nbpe_cs}"
@@ -90,8 +91,8 @@ if [ "${run_data_prep}" = true ]; then
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
-        --bpe_train_text "data/cs/train/text" \
-        --lm_train_text "data/cs/train/text"
+        --bpe_train_text "data/${cs_train}/text" \
+        --lm_train_text "data/${cs_train}/text"
 
     echo
     echo "=== CS data preparation done! ==="
@@ -128,6 +129,7 @@ if [ "${run_finetune}" = true ]; then
         --train_set "${cs_train}" \
         --valid_set "${cs_dev}" \
         --test_sets "${test_sets_all}" \
+        --lm_train_text "data/${cs_train}/text" \
         --speed_perturb_factors ${speed_perturb_factors} \
         "$@"
 fi
